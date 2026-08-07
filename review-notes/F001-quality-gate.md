@@ -87,14 +87,13 @@ Scope verdict: ✅ 必做。
 | 命令 | 本次结果 |
 |---|---|
 | `pnpm check` | 52 files，0 errors ✅ |
-| `pnpm test:coverage` | 18 files / 70 tests，0 failures ✅ |
+| `pnpm test:coverage` | 18 files / 76 tests，0 failures ✅ |
 | `pnpm -r --if-present run build` | 24 modules，exit 0；worker 独立 bundle 已生成 ✅ |
 | `pnpm test:e2e` | desktop + mobile viewport，4/4 passed ✅ |
 | Playwright latency attachment | 133 frames，p95 6.6 ms（合成管线） ✅ |
 
-Coverage 总体 68.43%；入口 `app.js` 由 Playwright 覆盖但未并入 Vitest v8 数据。会话控制器 86.37%、评分引擎 97.46%、质量门与练习定义核心路径有独立单元/集成测试。
+Coverage 总体 68.88%；入口 `app.js` 由 Playwright 覆盖但未并入 Vitest v8 数据。会话控制器 85.67%、评分引擎 97.46%、质量门与练习定义核心路径有独立单元/集成测试。正式 review 修复另覆盖 recorder stop、audio teardown、IndexedDB save 三个 abort 竞态边界。
 
 ## Artifact Hygiene
 
 工作树与 `main...HEAD` 根目录媒体扫描均无命中；截图和录屏仅存在 `/tmp/cat-cafe-evidence/F001/`。Git 工作树干净。
-

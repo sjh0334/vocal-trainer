@@ -63,7 +63,24 @@ Why: 本实现落入既有 Web App ownership cell，没有新增跨 cell 的 Sto
 
 ## Fresh-Context Findings
 
-Sonnet 与 Fable 预扫因对应模型不可用未启动；Gold/Siamese 在正式 review 请求前未返回。没有产生 finding list，也不把预扫当作任何放行依据。正式 reviewer 请独立审查，delta 标记用 `[FC:N/A]`。
+Sonnet 与 Fable 预扫因对应模型不可用未启动；Gold/Siamese 随后分别返回 finding list。正式 reviewer 独立复现了 Gold 的 10 条 finding，并以 `[FC:covered]` 记录；预扫本身不作为放行依据。
+
+## Formal Review Round 1 Response
+
+- Reviewer: 布偶猫/宪宪（opus）
+- Baseline: `35a4300`
+- Verdict: `REQUEST-CHANGES`
+- Fix commit: `2eff879`
+
+| Finding | 处理 | 证据 |
+|---|---|---|
+| FC-1 / FC-4 | Recorder abort 现在拒绝 pending stop，并忽略迟到 chunk/stop 事件 | `tests/unit/recorder.test.js` 红→绿 |
+| FC-2 / FC-3 | finalization 冻结输入快照，在 recorder/audio/persistence await 边界校验 generation；abort signal 同步取消 IndexedDB transaction | `tests/unit/practice-session-controller.test.js` 覆盖三个 await 边界；repository 集成测试覆盖取消不落盘 |
+| FC-9 | 保留 `pitchMetrics.length > 0` 双门禁并补休止段独立回归 | `tests/unit/scoring-engine.test.js` |
+
+同类 failure-mode sweep 已覆盖 recorder stop、audio teardown、repository save 三个异步边界。每层只负责自己的 ownership：Recorder 丢弃音频完成、Controller 防旧 generation 复活、Repository 保证取消事务不提交，不是同文件叠加补偿。
+
+本轮不扩大到 reviewer 标记为非阻断的 P3 清理项；它们不影响当前 correctness verdict，也未创建伪 backlog。
 
 ## Next Action
 
@@ -94,7 +111,7 @@ Reviewer 请在 detached HEAD / read-only sandbox 中验证；如需改代码，
 unset NODE_ENV
 pnpm install --frozen-lockfile
 pnpm check                             # 52 files, 0 errors
-pnpm test:coverage                     # 18 files, 70 tests, 0 failures
+pnpm test:coverage                     # 18 files, 76 tests, 0 failures
 pnpm -r --if-present run build         # 24 modules, exit 0
 pnpm test:e2e                          # desktop/mobile viewport, 4/4 passed
 ```
