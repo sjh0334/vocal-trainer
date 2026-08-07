@@ -15,15 +15,19 @@ export class PitchFrameGate {
   }
 
   accept(frame, activeSessionId) {
+    return this.evaluate(frame, activeSessionId) === "accepted";
+  }
+
+  evaluate(frame, activeSessionId) {
     if (!frame || frame.sessionId !== activeSessionId) {
-      return false;
+      return "rejected";
     }
     if (!Number.isInteger(frame.sequence) || frame.sequence <= this.#lastSequence) {
-      return false;
+      return "rejected";
     }
     this.#lastSequence = frame.sequence;
 
-    return Boolean(
+    const accepted = Boolean(
       frame.voiced &&
         Number.isFinite(frame.frequencyHz) &&
         frame.frequencyHz >= this.#options.minFrequency &&
@@ -31,6 +35,7 @@ export class PitchFrameGate {
         frame.rms >= this.#options.minRms &&
         frame.confidence >= this.#options.minConfidence,
     );
+    return accepted ? "accepted" : "unvoiced";
   }
 
   reset() {

@@ -44,4 +44,13 @@ describe("PitchFrameGate", () => {
 
     expect(gate.accept(frame({ sessionId: "session-b", sequence: 0 }), "session-b")).toBe(true);
   });
+
+  it("distinguishes an ordered unvoiced marker from stale data", () => {
+    const gate = new PitchFrameGate();
+
+    expect(gate.evaluate(frame({ voiced: false, frequencyHz: null }), "session-a")).toBe(
+      "unvoiced",
+    );
+    expect(gate.evaluate(frame({ sequence: 0 }), "session-a")).toBe("rejected");
+  });
 });
