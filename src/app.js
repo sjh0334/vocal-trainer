@@ -7,6 +7,7 @@ import { Recorder } from "./audio/recorder.js";
 import { SIMPLE_MELODIES } from "./exercises/simple-melodies.js";
 import { PlaybackController } from "./playback/playback-controller.js";
 import { TrackRenderer } from "./render/track-renderer.js";
+import { handlePageVisibility } from "./session/page-lifecycle.js";
 import { PracticeSessionController } from "./session/practice-session-controller.js";
 import { SessionRepository } from "./storage/session-repository.js";
 import { renderScreen } from "./ui/app-view.js";
@@ -282,6 +283,22 @@ app.addEventListener("click", async (event) => {
       button.disabled = false;
     }
   }
+});
+
+document.addEventListener("visibilitychange", () => {
+  handlePageVisibility({
+    hidden: document.hidden,
+    sessionState: sessionController.snapshot().state,
+    stop: (reason) => sessionController.stop(reason),
+    abort: () => sessionController.abort(),
+  })
+    .then((outcome) => {
+      if (outcome === "aborted") {
+        state.route = "home";
+        render();
+      }
+    })
+    .catch(render);
 });
 
 window.addEventListener("beforeunload", () => {
