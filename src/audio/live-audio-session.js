@@ -29,8 +29,8 @@ export class FrameAccumulator {
   }
 }
 
-function defaultWorkerFactory(url) {
-  return new Worker(url, { type: "module" });
+function defaultWorkerFactory() {
+  return new Worker(new URL("../pitch/pitch-worker.js", import.meta.url), { type: "module" });
 }
 
 function defaultWorkletNodeFactory(context) {
@@ -42,9 +42,13 @@ export class LiveAudioSession {
 
   #context = null;
 
+  #detachErrorListeners = [];
+
   #mediaDevices;
 
   #node = null;
+
+  #performanceNow;
 
   #source = null;
 
@@ -61,11 +65,13 @@ export class LiveAudioSession {
     AudioContextCtor = globalThis.AudioContext ?? globalThis.webkitAudioContext,
     workerFactory = defaultWorkerFactory,
     workletNodeFactory = defaultWorkletNodeFactory,
+    performanceNow = () => globalThis.performance?.now() ?? Date.now(),
   } = {}) {
     this.#mediaDevices = mediaDevices;
     this.#AudioContext = AudioContextCtor;
     this.#workerFactory = workerFactory;
     this.#workletNodeFactory = workletNodeFactory;
+    this.#performanceNow = performanceNow;
   }
 
   get stream() {
@@ -76,7 +82,7 @@ export class LiveAudioSession {
     return (this.#context?.currentTime ?? 0) * 1000;
   }
 
-  async start({ sessionId, onFrame }) {
+  async start({ sessionId, onFrame, onError = () => {} }) {
     if (this.#stream) {
       throw new Error("live audio session already active");
     }
@@ -95,7 +101,7 @@ export class LiveAudioSession {
       });
       this.#context = new this.#AudioContext();
       await this.#context.audioWorklet.addModule(new URL("./audio-worklet.js", import.meta.url));
-      this.#worker = this.#workerFactory(new URL("../pitch/pitch-worker.js", import.meta.url));
+      this.#worker = this.#workerFactory();
       this.#node = this.#workletNodeFactory(this.#context);
       this.#source = this.#context.createMediaStreamSource(this.#stream);
       const silentOutput = this.#context.createGain();
@@ -105,11 +111,36 @@ export class LiveAudioSession {
       silentOutput.connect(this.#context.destination);
 
       this.#node.port.addEventListener("message", (event) => {
-        const payload = { ...event.data, sessionId };
+        const frameAgeMs = Math.max(0, this.currentTimeMs - event.data.timestampMs);
+        const payload = {
+          ...event.data,
+          sessionId,
+          capturedAtMs: this.#performanceNow() - frameAgeMs,
+        };
         this.#worker.postMessage(payload, [payload.samples.buffer]);
       });
       this.#node.port.start?.();
-      this.#worker.addEventListener("message", (event) => onFrame(event.data));
+      this.#worker.addEventListener("message", (event) => {
+        const latencyMs = Number.isFinite(event.data.capturedAtMs)
+          ? Math.max(0, this.#performanceNow() - event.data.capturedAtMs)
+          : null;
+        onFrame({ ...event.data, latencyMs });
+      });
+      for (const track of this.#stream.getTracks()) {
+        const handleEnded = () => onError(new Error("microphone input ended"));
+        track.addEventListener?.("ended", handleEnded);
+        this.#detachErrorListeners.push(() => track.removeEventListener?.("ended", handleEnded));
+      }
+      const handleWorkerError = (event) => {
+        onError(event.error ?? new Error(event.message ?? "pitch worker failed"));
+      };
+      const handleWorkerMessageError = () => onError(new Error("pitch worker message failed"));
+      this.#worker.addEventListener("error", handleWorkerError);
+      this.#worker.addEventListener("messageerror", handleWorkerMessageError);
+      this.#detachErrorListeners.push(() => {
+        this.#worker?.removeEventListener("error", handleWorkerError);
+        this.#worker?.removeEventListener("messageerror", handleWorkerMessageError);
+      });
       await this.#context.resume();
       return this.#stream;
     } catch (error) {
@@ -119,6 +150,10 @@ export class LiveAudioSession {
   }
 
   async stop() {
+    for (const detach of this.#detachErrorListeners) {
+      detach();
+    }
+    this.#detachErrorListeners = [];
     this.#source?.disconnect();
     this.#node?.disconnect();
     this.#worker?.terminate();

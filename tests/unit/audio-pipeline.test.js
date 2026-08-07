@@ -31,6 +31,7 @@ describe("analyzePitchFrame", () => {
       sessionId: "session-a",
       sequence: 7,
       timestampMs: 1234,
+      capturedAtMs: 1200,
       sampleRate: 48_000,
       samples,
     });
@@ -39,6 +40,7 @@ describe("analyzePitchFrame", () => {
       sessionId: "session-a",
       sequence: 7,
       timestampMs: 1234,
+      capturedAtMs: 1200,
       voiced: true,
     });
     expect(frame.frequencyHz).toBeCloseTo(220, 0);

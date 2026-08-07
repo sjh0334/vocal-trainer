@@ -80,4 +80,10 @@ describe("Recorder", () => {
     }
     expect(() => new Recorder({ MediaRecorderCtor: Unsupported }).start({})).toThrow(/format/i);
   });
+
+  it("defers a missing browser MediaRecorder error until the user starts", () => {
+    const recorder = new Recorder({ MediaRecorderCtor: undefined });
+
+    expect(() => recorder.start({})).toThrow(/MediaRecorder is unavailable/i);
+  });
 });

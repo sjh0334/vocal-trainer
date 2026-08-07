@@ -14,9 +14,6 @@ export class Recorder {
   #state = "idle";
 
   constructor({ MediaRecorderCtor = globalThis.MediaRecorder, mimeTypes = MIME_TYPES } = {}) {
-    if (!MediaRecorderCtor) {
-      throw new Error("MediaRecorder is unavailable in this browser");
-    }
     this.#MediaRecorder = MediaRecorderCtor;
     this.#mimeTypes = mimeTypes;
   }
@@ -32,6 +29,9 @@ export class Recorder {
   start(stream) {
     if (this.#state === "recording" || this.#state === "stopping") {
       throw new Error("recording already active");
+    }
+    if (!this.#MediaRecorder) {
+      throw new Error("MediaRecorder is unavailable in this browser");
     }
     const mimeType = this.#mimeTypes.find((type) => this.#MediaRecorder.isTypeSupported(type));
     if (!mimeType) {

@@ -20,13 +20,15 @@ function deferred() {
   return { promise, reject, resolve };
 }
 
-function setup({ startPromise, saveError } = {}) {
+function setup({ startPromise, saveError, delay = async () => {}, useDefaultTimers = false } = {}) {
   let onFrame;
+  let onError;
   const stream = { id: "stream" };
   const audioSession = {
     currentTimeMs: 1000,
     start: vi.fn(async (options) => {
       onFrame = options.onFrame;
+      onError = options.onError;
       return startPromise ? startPromise.promise : stream;
     }),
     stop: vi.fn(async () => {}),
@@ -47,25 +49,29 @@ function setup({ startPromise, saveError } = {}) {
     }),
   };
   const scheduled = [];
-  const controller = new PracticeSessionController({
+  const controllerOptions = {
     audioSession,
     recorder,
     repository,
     calibrationMs: 0,
     countdownMs: 0,
-    delay: async () => {},
+    delay,
     idFactory: () => "session-a",
     now: () => new Date("2026-08-08T00:00:00.000Z"),
-    setTimer: (callback, milliseconds) => {
+  };
+  if (!useDefaultTimers) {
+    controllerOptions.setTimer = (callback, milliseconds) => {
       scheduled.push({ callback, milliseconds });
       return scheduled.length;
-    },
-    clearTimer: vi.fn(),
-  });
+    };
+    controllerOptions.clearTimer = vi.fn();
+  }
+  const controller = new PracticeSessionController(controllerOptions);
   return {
     audioSession,
     controller,
     emit: (frame) => onFrame(frame),
+    failAudio: (error) => onError(error),
     recorder,
     repository,
     scheduled,
@@ -110,6 +116,70 @@ describe("PracticeSessionController", () => {
     expect(recorder.start).toHaveBeenCalledWith(stream);
     expect(scheduled[0].milliseconds).toBe(1000);
     await expect(controller.start(PRACTICE)).rejects.toThrow(/active/i);
+  });
+
+  it("calls browser timer APIs with their required global receiver", async () => {
+    const nativeSetTimer = globalThis.setTimeout;
+    const nativeClearTimer = globalThis.clearTimeout;
+    const setTimer = vi.spyOn(globalThis, "setTimeout").mockImplementation(function () {
+      if (this !== globalThis) {
+        throw new TypeError("Illegal invocation");
+      }
+      return nativeSetTimer(() => {}, 60_000);
+    });
+    const clearTimer = vi.spyOn(globalThis, "clearTimeout").mockImplementation(function (timer) {
+      if (this !== globalThis) {
+        throw new TypeError("Illegal invocation");
+      }
+      return nativeClearTimer(timer);
+    });
+    const { controller } = setup({ useDefaultTimers: true });
+
+    await controller.start(PRACTICE);
+    await controller.stop("user");
+
+    expect(setTimer).toHaveBeenCalledOnce();
+    expect(clearTimer).toHaveBeenCalledOnce();
+  });
+
+  it("measures the noise floor during calibration and gates quieter running frames", async () => {
+    const calibration = deferred();
+    const { controller, emit } = setup({ delay: () => calibration.promise });
+    const starting = controller.start(PRACTICE);
+    await vi.waitFor(() => expect(controller.snapshot().state).toBe("calibrating"));
+    emit(
+      pitchFrame(0, {
+        voiced: false,
+        frequencyHz: null,
+        midi: null,
+        confidence: 0,
+        rms: 0.02,
+      }),
+    );
+    emit(
+      pitchFrame(1, {
+        voiced: false,
+        frequencyHz: null,
+        midi: null,
+        confidence: 0,
+        rms: 0.04,
+      }),
+    );
+    calibration.resolve();
+    await starting;
+
+    expect(controller.snapshot().calibration).toMatchObject({
+      status: "noisy",
+      sampleCount: 2,
+      noiseFloorRms: 0.03,
+      peakRms: 0.04,
+      gateRms: 0.06,
+    });
+
+    emit(pitchFrame(2, { rms: 0.05 }));
+    emit(pitchFrame(3, { rms: 0.1 }));
+    const snapshot = await controller.stop("user");
+    expect(snapshot.report.dataQuality).toMatchObject({ totalFrames: 2, voicedFrames: 1 });
   });
 
   it("scores only ordered frames from the running active session", async () => {
@@ -170,6 +240,18 @@ describe("PracticeSessionController", () => {
     expect(controller.snapshot().state).toBe("idle");
     expect(recorder.start).not.toHaveBeenCalled();
     expect(audioSession.stop).toHaveBeenCalled();
+  });
+
+  it("releases the whole session when the microphone or worker fails", async () => {
+    const { audioSession, controller, failAudio, recorder } = setup();
+    await controller.start(PRACTICE);
+
+    failAudio(new Error("microphone disconnected"));
+    await vi.waitFor(() => expect(controller.snapshot().state).toBe("error"));
+
+    expect(controller.snapshot().error).toBe("microphone disconnected");
+    expect(recorder.abort).toHaveBeenCalledOnce();
+    expect(audioSession.stop).toHaveBeenCalledOnce();
   });
 
   it("keeps an in-memory report when persistent storage fails", async () => {

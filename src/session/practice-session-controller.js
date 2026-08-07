@@ -1,8 +1,8 @@
-import { targetAtTime } from "../domain/practice-definition.js";
+import { pendingCalibration, summarizeCalibration } from "../audio/calibration.js";
 import { PitchFrameGate } from "../pitch/frame-quality.js";
-import { centsBetween, midiToFrequency } from "../pitch/note.js";
 import { buildDiagnostics } from "../scoring/diagnostics.js";
 import { scoreSession } from "../scoring/scoring-engine.js";
+import { assessPitchFrame } from "./frame-assessment.js";
 
 const ACTIVE_STATES = new Set([
   "requesting_permission",
@@ -15,30 +15,19 @@ const ACTIVE_STATES = new Set([
 function defaultDelay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
-
 function defaultIdFactory() {
   return crypto.randomUUID();
 }
-
-function classifyCents(signedCents) {
-  if (signedCents === null) {
-    return "unvoiced";
-  }
-  if (signedCents > 15) {
-    return "sharp";
-  }
-  if (signedCents < -15) {
-    return "flat";
-  }
-  return "accurate";
-}
-
 export class PracticeSessionController {
   #assessments = [];
 
   #audioSession;
 
   #calibrationMs;
+
+  #calibration = pendingCalibration();
+
+  #calibrationSamples = [];
 
   #clearTimer;
 
@@ -49,6 +38,8 @@ export class PracticeSessionController {
   #error = null;
 
   #finalization = null;
+
+  #failure = null;
 
   #frameGate = new PitchFrameGate();
 
@@ -93,8 +84,8 @@ export class PracticeSessionController {
     delay = defaultDelay,
     idFactory = defaultIdFactory,
     now = () => new Date(),
-    setTimer = globalThis.setTimeout,
-    clearTimer = globalThis.clearTimeout,
+    setTimer = (callback, milliseconds) => globalThis.setTimeout(callback, milliseconds),
+    clearTimer = (timer) => globalThis.clearTimeout(timer),
   }) {
     this.#audioSession = audioSession;
     this.#recorder = recorder;
@@ -119,6 +110,7 @@ export class PracticeSessionController {
       state: this.#state,
       sessionId: this.#sessionId,
       practice: this.#practice,
+      calibration: this.#calibration,
       trajectory: this.#trajectory,
       report: this.#report,
       record: this.#record,
@@ -135,27 +127,44 @@ export class PracticeSessionController {
     }
   }
 
-  async start(practice) {
-    if (ACTIVE_STATES.has(this.#state)) {
-      throw new Error("a practice session is already active");
+  #clearEndTimer() {
+    if (this.#timer !== null) {
+      this.#clearTimer(this.#timer);
+      this.#timer = null;
     }
-    const generation = ++this.#generation;
-    this.#sessionId = this.#idFactory();
-    this.#practice = practice;
+  }
+
+  #clearSessionData() {
+    this.#sessionId = null;
+    this.#practice = null;
     this.#trajectory = [];
     this.#assessments = [];
+    this.#calibration = pendingCalibration();
+    this.#calibrationSamples = [];
+    this.#frameGate = new PitchFrameGate();
     this.#record = null;
     this.#report = null;
     this.#error = null;
     this.#persistence = "none";
     this.#finalization = null;
-    this.#frameGate.reset();
+    this.#failure = null;
+  }
+
+  async start(practice) {
+    if (ACTIVE_STATES.has(this.#state)) {
+      throw new Error("a practice session is already active");
+    }
+    const generation = ++this.#generation;
+    this.#clearSessionData();
+    this.#sessionId = this.#idFactory();
+    this.#practice = practice;
     this.#transition("requesting_permission");
 
     try {
       const stream = await this.#audioSession.start({
         sessionId: this.#sessionId,
         onFrame: (frame) => this.#handleFrame(frame, generation),
+        onError: (error) => this.#handleAudioError(error, generation),
       });
       if (generation !== this.#generation) {
         await this.#audioSession.stop();
@@ -167,6 +176,9 @@ export class PracticeSessionController {
       if (generation !== this.#generation) {
         return this.snapshot();
       }
+
+      this.#calibration = summarizeCalibration(this.#calibrationSamples);
+      this.#frameGate = new PitchFrameGate({ minRms: this.#calibration.gateRms });
 
       this.#transition("countdown");
       await this.#delay(this.#countdownMs);
@@ -196,7 +208,17 @@ export class PracticeSessionController {
   }
 
   #handleFrame(frame, generation) {
-    if (generation !== this.#generation || this.#state !== "running") {
+    if (generation !== this.#generation) {
+      return;
+    }
+    if (this.#state === "calibrating") {
+      const quality = this.#frameGate.evaluate(frame, this.#sessionId);
+      if (quality !== "rejected" && Number.isFinite(frame.rms)) {
+        this.#calibrationSamples.push(frame.rms);
+      }
+      return;
+    }
+    if (this.#state !== "running") {
       return;
     }
     const quality = this.#frameGate.evaluate(frame, this.#sessionId);
@@ -207,34 +229,44 @@ export class PracticeSessionController {
     if (timestampMs < 0) {
       return;
     }
-    const target = targetAtTime(this.#practice, timestampMs);
-    const signedCents =
-      quality === "accepted" && target?.midiNote !== null && target
-        ? centsBetween(frame.frequencyHz, midiToFrequency(target.midiNote))
-        : null;
-    const trajectoryPoint = {
+    const { assessment, trajectoryPoint } = assessPitchFrame({
+      frame,
+      quality,
+      practice: this.#practice,
       timestampMs,
-      frequencyHz: quality === "accepted" ? frame.frequencyHz : null,
-      midi: quality === "accepted" ? frame.midi : null,
-      confidence: frame.confidence,
-      rms: frame.rms,
-      voiced: quality === "accepted",
-      targetSegmentId: target?.id ?? null,
-      signedCents,
-      classification: classifyCents(signedCents),
-    };
+    });
     this.#trajectory.push(trajectoryPoint);
-
-    if (target?.midiNote !== null && target) {
-      this.#assessments.push({
-        targetSegmentId: target.id,
-        timestampMs,
-        signedCents,
-        rms: frame.rms,
-        voiced: quality === "accepted",
-      });
+    if (assessment) {
+      this.#assessments.push(assessment);
     }
     this.#transition("running");
+  }
+
+  #handleAudioError(error, generation) {
+    if (
+      generation !== this.#generation ||
+      !ACTIVE_STATES.has(this.#state) ||
+      this.#finalization ||
+      this.#failure
+    ) {
+      return;
+    }
+    this.#failure = this.#failAudio(error, generation);
+  }
+
+  async #failAudio(error, generation) {
+    if (generation !== this.#generation) {
+      return;
+    }
+    const failureGeneration = ++this.#generation;
+    this.#clearEndTimer();
+    this.#recorder.abort();
+    await this.#audioSession.stop();
+    if (failureGeneration !== this.#generation) {
+      return;
+    }
+    this.#error = error instanceof Error ? error.message : String(error);
+    this.#transition("error");
   }
 
   stop(reason = "user") {
@@ -250,10 +282,7 @@ export class PracticeSessionController {
 
   async #finalize(reason) {
     this.#transition("finalizing");
-    if (this.#timer !== null) {
-      this.#clearTimer(this.#timer);
-      this.#timer = null;
-    }
+    this.#clearEndTimer();
 
     try {
       const recording = await this.#recorder.stop();
@@ -303,21 +332,10 @@ export class PracticeSessionController {
       return this.snapshot();
     }
     this.#generation += 1;
-    if (this.#timer !== null) {
-      this.#clearTimer(this.#timer);
-      this.#timer = null;
-    }
+    this.#clearEndTimer();
     this.#recorder.abort();
     await this.#audioSession.stop();
-    this.#sessionId = null;
-    this.#practice = null;
-    this.#trajectory = [];
-    this.#assessments = [];
-    this.#record = null;
-    this.#report = null;
-    this.#error = null;
-    this.#persistence = "none";
-    this.#finalization = null;
+    this.#clearSessionData();
     this.#transition("idle");
     return this.snapshot();
   }
@@ -326,16 +344,7 @@ export class PracticeSessionController {
     if (ACTIVE_STATES.has(this.#state)) {
       throw new Error("cannot reset an active practice session");
     }
-    this.#state = "idle";
-    this.#sessionId = null;
-    this.#practice = null;
-    this.#trajectory = [];
-    this.#assessments = [];
-    this.#record = null;
-    this.#report = null;
-    this.#error = null;
-    this.#persistence = "none";
-    this.#finalization = null;
+    this.#clearSessionData();
     this.#transition("idle");
   }
 }

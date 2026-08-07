@@ -1,0 +1,121 @@
+.stage-page {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 2rem;
+}
+
+.stage-back {
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+}
+
+.stage-status {
+  max-width: 36rem;
+  text-align: center;
+}
+
+.stage-status h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(2.5rem, 7vw, 5rem);
+}
+
+.stage-status p:last-child {
+  color: var(--muted);
+}
+
+.pulse-ring {
+  width: 7rem;
+  height: 7rem;
+  margin: 0 auto 2rem;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5rem rgb(141 123 255 / 7%);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(0.9);
+    opacity: 0.65;
+  }
+}
+
+.session-header,
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.session-header h1,
+.page-header h1 {
+  font-size: clamp(2rem, 5vw, 3.8rem);
+}
+
+.live-readout {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.live-readout > div {
+  padding: 1rem 1.3rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.live-readout span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.live-readout strong {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.live-readout.accurate strong {
+  color: var(--accurate);
+}
+
+.live-readout.sharp strong {
+  color: var(--sharp);
+}
+
+.live-readout.flat strong {
+  color: var(--flat);
+}
+
+.legend {
+  display: flex;
+  gap: 0.8rem;
+  font-size: 0.8rem;
+}
+
+.legend .accurate {
+  color: var(--accurate);
+}
+
+.legend .sharp {
+  color: var(--sharp);
+}
+
+.legend .flat {
+  color: var(--flat);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: min(42vh, 22rem);
+  margin-top: 1rem;
+  border-radius: 0.9rem;
+}
+
+.session-tip {
+  margin: 0.8rem 0 0;
+  text-align: center;
+}
