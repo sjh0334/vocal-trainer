@@ -72,6 +72,22 @@ describe("scoreSession", () => {
     expect(report.dataQuality.voicedCoverage).toBeCloseTo(0.125, 6);
   });
 
+  it("returns insufficient when voiced frames only belong to a rest segment", () => {
+    const segments = [
+      { id: "rest", startMs: 0, endMs: 1000, midiNote: null, label: "休止" },
+      { id: "a", startMs: 1000, endMs: 2000, midiNote: 60, label: "C4" },
+    ];
+    const report = scoreSession({
+      segments,
+      assessments: repeated("rest", [0, 0, 0, 0, 0, 0]),
+    });
+
+    expect(report.status).toBe("insufficient");
+    expect(report.totalScore).toBeNull();
+    expect(report.dataQuality).toMatchObject({ voicedFrames: 6, voicedCoverage: 1 });
+    expect(report.segmentMetrics).toEqual([]);
+  });
+
   it("detects breath gaps and sustained volume decay", () => {
     const report = scoreSession({
       segments: [SEGMENTS[0]],

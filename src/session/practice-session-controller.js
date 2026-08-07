@@ -39,6 +39,8 @@ export class PracticeSessionController {
 
   #finalization = null;
 
+  #finalizationCancellation = null;
+
   #failure = null;
 
   #frameGate = new PitchFrameGate();
@@ -147,6 +149,7 @@ export class PracticeSessionController {
     this.#error = null;
     this.#persistence = "none";
     this.#finalization = null;
+    this.#finalizationCancellation = null;
     this.#failure = null;
   }
 
@@ -276,54 +279,85 @@ export class PracticeSessionController {
     if (this.#state !== "running") {
       return Promise.reject(new Error("no running practice session"));
     }
-    this.#finalization = this.#finalize(reason);
+    const generation = this.#generation;
+    const cancellation = new AbortController();
+    this.#finalizationCancellation = cancellation;
+    this.#finalization = this.#finalize(reason, generation, cancellation);
     return this.#finalization;
   }
 
-  async #finalize(reason) {
+  async #finalize(reason, generation, cancellation) {
+    const practice = this.#practice;
+    const sessionId = this.#sessionId;
+    const assessments = [...this.#assessments];
+    const trajectory = [...this.#trajectory];
     this.#transition("finalizing");
     this.#clearEndTimer();
 
     try {
       const recording = await this.#recorder.stop();
+      if (generation !== this.#generation) {
+        return this.snapshot();
+      }
       await this.#audioSession.stop();
+      if (generation !== this.#generation) {
+        return this.snapshot();
+      }
       const score = scoreSession({
-        segments: this.#practice.segments,
-        assessments: this.#assessments,
+        segments: practice.segments,
+        assessments,
       });
-      this.#report = {
+      const report = {
         ...score,
         stopReason: reason,
         diagnostics: buildDiagnostics(score),
       };
-      const durationMs = this.#practice.segments.at(-1)?.endMs ?? 0;
-      this.#record = {
-        id: this.#sessionId,
+      const durationMs = practice.segments.at(-1)?.endMs ?? 0;
+      const record = {
+        id: sessionId,
         schemaVersion: 1,
-        practiceId: this.#practice.id,
-        practiceVersion: this.#practice.version,
+        practiceId: practice.id,
+        practiceVersion: practice.version,
         createdAt: this.#now().toISOString(),
         durationMs,
         mimeType: recording.mimeType,
         audioBlob: recording.audioBlob,
-        trajectory: [...this.#trajectory],
-        report: this.#report,
+        trajectory,
+        report,
       };
+      this.#report = report;
+      this.#record = record;
       try {
-        await this.#repository.save(this.#record);
+        await this.#repository.save(record, { signal: cancellation.signal });
+        if (generation !== this.#generation) {
+          return this.snapshot();
+        }
         this.#persistence = "saved";
         this.#error = null;
       } catch (error) {
+        if (generation !== this.#generation) {
+          return this.snapshot();
+        }
         this.#persistence = "failed";
         this.#error = error instanceof Error ? error.message : String(error);
       }
       this.#transition("report");
       return this.snapshot();
     } catch (error) {
+      if (generation !== this.#generation) {
+        return this.snapshot();
+      }
       await this.#audioSession.stop();
+      if (generation !== this.#generation) {
+        return this.snapshot();
+      }
       this.#error = error instanceof Error ? error.message : String(error);
       this.#transition("error");
       throw error;
+    } finally {
+      if (this.#finalizationCancellation === cancellation) {
+        this.#finalizationCancellation = null;
+      }
     }
   }
 
@@ -332,6 +366,7 @@ export class PracticeSessionController {
       return this.snapshot();
     }
     this.#generation += 1;
+    this.#finalizationCancellation?.abort();
     this.#clearEndTimer();
     this.#recorder.abort();
     await this.#audioSession.stop();

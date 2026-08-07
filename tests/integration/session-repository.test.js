@@ -66,6 +66,18 @@ describe("SessionRepository", () => {
     await expect(repository.get("session-1")).resolves.toBeNull();
   });
 
+  it("does not persist a save cancelled before its transaction starts", async () => {
+    const repository = makeRepository();
+    const cancellation = new AbortController();
+
+    const saving = repository.save(record(), { signal: cancellation.signal });
+    const rejected = expect(saving).rejects.toMatchObject({ name: "AbortError" });
+    cancellation.abort();
+
+    await rejected;
+    await expect(repository.get("session-1")).resolves.toBeNull();
+  });
+
   it("deletes one record or clears all records", async () => {
     const repository = makeRepository();
     await repository.save(record("one"));

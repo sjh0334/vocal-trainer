@@ -11,6 +11,8 @@ export class Recorder {
 
   #mimeTypes;
 
+  #rejectCompletion = null;
+
   #state = "idle";
 
   constructor({ MediaRecorderCtor = globalThis.MediaRecorder, mimeTypes = MIME_TYPES } = {}) {
@@ -40,9 +42,10 @@ export class Recorder {
 
     this.#chunks = [];
     this.#completion = null;
+    this.#rejectCompletion = null;
     this.#mediaRecorder = new this.#MediaRecorder(stream, { mimeType });
     this.#mediaRecorder.addEventListener("dataavailable", (event) => {
-      if (event.data?.size > 0) {
+      if ((this.#state === "recording" || this.#state === "stopping") && event.data?.size > 0) {
         this.#chunks.push(event.data);
       }
     });
@@ -61,11 +64,16 @@ export class Recorder {
     const mediaRecorder = this.#mediaRecorder;
     this.#state = "stopping";
     this.#completion = new Promise((resolve, reject) => {
+      this.#rejectCompletion = reject;
       mediaRecorder.addEventListener(
         "stop",
         () => {
+          if (this.#state !== "stopping") {
+            return;
+          }
           const mimeType = mediaRecorder.mimeType;
           const audioBlob = new Blob(this.#chunks, { type: mimeType });
+          this.#rejectCompletion = null;
           this.#state = "complete";
           resolve({ audioBlob, mimeType });
         },
@@ -74,6 +82,10 @@ export class Recorder {
       mediaRecorder.addEventListener(
         "error",
         (event) => {
+          if (this.#state !== "stopping") {
+            return;
+          }
+          this.#rejectCompletion = null;
           this.#state = "error";
           reject(event.error ?? new Error("recording failed"));
         },
@@ -85,10 +97,13 @@ export class Recorder {
   }
 
   abort() {
+    const rejectCompletion = this.#rejectCompletion;
+    this.#rejectCompletion = null;
     this.#chunks = [];
+    this.#state = "idle";
+    rejectCompletion?.(new DOMException("recording aborted", "AbortError"));
     if (this.#mediaRecorder?.state === "recording") {
       this.#mediaRecorder.stop();
     }
-    this.#state = "idle";
   }
 }

@@ -20,9 +20,18 @@ function deferred() {
   return { promise, reject, resolve };
 }
 
-function setup({ startPromise, saveError, delay = async () => {}, useDefaultTimers = false } = {}) {
+function setup({
+  startPromise,
+  recordingStopPromise,
+  audioStopPromise,
+  savePromise,
+  saveError,
+  delay = async () => {},
+  useDefaultTimers = false,
+} = {}) {
   let onFrame;
   let onError;
+  let audioStopCalls = 0;
   const stream = { id: "stream" };
   const audioSession = {
     currentTimeMs: 1000,
@@ -31,18 +40,30 @@ function setup({ startPromise, saveError, delay = async () => {}, useDefaultTime
       onError = options.onError;
       return startPromise ? startPromise.promise : stream;
     }),
-    stop: vi.fn(async () => {}),
+    stop: vi.fn(() => {
+      audioStopCalls += 1;
+      return audioStopPromise && audioStopCalls === 1
+        ? audioStopPromise.promise
+        : Promise.resolve();
+    }),
   };
   const recorder = {
     start: vi.fn(),
-    stop: vi.fn(async () => ({
-      audioBlob: new Blob(["audio"], { type: "audio/webm" }),
-      mimeType: "audio/webm",
-    })),
+    stop: vi.fn(() =>
+      recordingStopPromise
+        ? recordingStopPromise.promise
+        : Promise.resolve({
+            audioBlob: new Blob(["audio"], { type: "audio/webm" }),
+            mimeType: "audio/webm",
+          }),
+    ),
     abort: vi.fn(),
   };
   const repository = {
     save: vi.fn(async () => {
+      if (savePromise) {
+        return savePromise.promise;
+      }
       if (saveError) {
         throw saveError;
       }
@@ -215,6 +236,65 @@ describe("PracticeSessionController", () => {
     expect(recorder.stop).toHaveBeenCalledOnce();
     expect(audioSession.stop).toHaveBeenCalledOnce();
     expect(repository.save).toHaveBeenCalledOnce();
+  });
+
+  it("abandons finalization without saving when the session is aborted", async () => {
+    const recordingStop = deferred();
+    const { audioSession, controller, recorder, repository } = setup({
+      recordingStopPromise: recordingStop,
+    });
+    await controller.start(PRACTICE);
+
+    const finalizing = controller.stop("user");
+    await vi.waitFor(() => expect(controller.snapshot().state).toBe("finalizing"));
+    await controller.abort();
+    recordingStop.resolve({
+      audioBlob: new Blob(["late audio"], { type: "audio/webm" }),
+      mimeType: "audio/webm",
+    });
+
+    await expect(finalizing).resolves.toMatchObject({ state: "idle" });
+    expect(controller.snapshot().state).toBe("idle");
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(recorder.abort).toHaveBeenCalledOnce();
+    expect(audioSession.stop).toHaveBeenCalledOnce();
+  });
+
+  it("does not resume finalization after an abort interrupts audio teardown", async () => {
+    const audioStop = deferred();
+    const { audioSession, controller, recorder, repository } = setup({
+      audioStopPromise: audioStop,
+    });
+    await controller.start(PRACTICE);
+
+    const finalizing = controller.stop("user");
+    await vi.waitFor(() => expect(audioSession.stop).toHaveBeenCalledOnce());
+    await controller.abort();
+    audioStop.resolve();
+
+    await expect(finalizing).resolves.toMatchObject({ state: "idle" });
+    expect(controller.snapshot().state).toBe("idle");
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(recorder.abort).toHaveBeenCalledOnce();
+    expect(audioSession.stop).toHaveBeenCalledTimes(2);
+  });
+
+  it("cancels persistence and stays idle when aborted while saving", async () => {
+    const saving = deferred();
+    const { controller, recorder, repository } = setup({ savePromise: saving });
+    await controller.start(PRACTICE);
+
+    const finalizing = controller.stop("user");
+    const finalized = expect(finalizing).resolves.toMatchObject({ state: "idle" });
+    await vi.waitFor(() => expect(repository.save).toHaveBeenCalledOnce());
+    const saveOptions = repository.save.mock.calls[0][1];
+    await controller.abort();
+    saving.reject(new DOMException("operation aborted", "AbortError"));
+
+    await finalized;
+    expect(saveOptions.signal.aborted).toBe(true);
+    expect(controller.snapshot()).toMatchObject({ state: "idle", record: null, report: null });
+    expect(recorder.abort).toHaveBeenCalledOnce();
   });
 
   it("cleans up a rejected permission request and exposes the error", async () => {

@@ -68,6 +68,21 @@ describe("Recorder", () => {
     await first;
   });
 
+  it("rejects a pending stop when the recording is aborted", async () => {
+    const recorder = new Recorder({ MediaRecorderCtor: FakeMediaRecorder });
+    recorder.start({ id: "stream" });
+    const mediaRecorder = recorder.mediaRecorderForTests;
+
+    const stopping = recorder.stop();
+    const rejected = expect(stopping).rejects.toMatchObject({ name: "AbortError" });
+    recorder.abort();
+    mediaRecorder.emitChunk("late audio");
+    mediaRecorder.finish();
+
+    await rejected;
+    expect(recorder.state).toBe("idle");
+  });
+
   it("rejects a second start and unsupported browsers", () => {
     const recorder = new Recorder({ MediaRecorderCtor: FakeMediaRecorder });
     recorder.start({ id: "stream" });

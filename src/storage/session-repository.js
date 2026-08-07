@@ -16,6 +16,18 @@ function transactionComplete(transaction) {
   });
 }
 
+function abortReason(signal) {
+  return signal?.reason instanceof Error
+    ? signal.reason
+    : new DOMException("operation aborted", "AbortError");
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) {
+    throw abortReason(signal);
+  }
+}
+
 function validateRecord(record) {
   if (!record || typeof record.id !== "string" || record.id === "") {
     throw new TypeError("record.id must be a non-empty string");
@@ -75,12 +87,31 @@ export class SessionRepository {
     return this.#databasePromise;
   }
 
-  async save(record) {
+  async save(record, { signal } = {}) {
     validateRecord(record);
+    throwIfAborted(signal);
     const database = await this.#database();
+    throwIfAborted(signal);
     const transaction = database.transaction(STORE_NAME, "readwrite");
-    transaction.objectStore(STORE_NAME).put(record);
-    await transactionComplete(transaction);
+    const abortTransaction = () => {
+      try {
+        transaction.abort();
+      } catch {
+        // The transaction completed between the signal and this event handler.
+      }
+    };
+    signal?.addEventListener("abort", abortTransaction, { once: true });
+    try {
+      transaction.objectStore(STORE_NAME).put(record);
+      await transactionComplete(transaction);
+    } catch (error) {
+      if (signal?.aborted) {
+        throw abortReason(signal);
+      }
+      throw error;
+    } finally {
+      signal?.removeEventListener("abort", abortTransaction);
+    }
     return record.id;
   }
 
