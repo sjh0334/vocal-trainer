@@ -69,6 +69,20 @@ describe("renderScreen", () => {
     expect(html).toContain("3%");
   });
 
+  it("describes the countdown as a long-tone target", () => {
+    const html = renderScreen({
+      route: "session",
+      practice: LONG_TONE_PRACTICES[0],
+      session: {
+        state: "countdown",
+        trajectory: [],
+      },
+    });
+
+    expect(html).toContain("目标长音即将从中央游标进入");
+    expect(html).not.toContain("旋律");
+  });
+
   it("renders explainable scores, diagnostics and recording controls", () => {
     const html = renderScreen({
       route: "report",

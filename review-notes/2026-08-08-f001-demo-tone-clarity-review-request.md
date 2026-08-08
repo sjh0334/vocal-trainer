@@ -74,7 +74,7 @@ pnpm install --frozen-lockfile
 ## 自检证据
 
 - Red: `demo-player.test.js` 期望 2400 Hz/Q 0.55/0.06/55 ms，实际仍为 1400 Hz/0.065/80 ms，按预期失败。
-- Green: targeted test 1/1；全量测试 83/83；E2E 4/4；Biome 56 files；build 26 modules。
+- Green: 示范音 targeted test 1/1；review 文案回归 test 6/6；全量测试 84/84；E2E 4/4；Biome 56 files；build 26 modules。
 - Dogfood: 真实 Chromium 完整播放 A3 示范音 8 秒，按钮正常恢复，`pageErrors=[]`；Hub Browser Preview 已打开供 operator 试听。
 - 根目录媒体/设计工件：无；`.pen`：无。
 - Quality gate: `review-notes/F001-quality-gate.md`。

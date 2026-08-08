@@ -99,7 +99,7 @@ Scope verdict: ✅ 必做。
 | 命令 | 本次结果 |
 |---|---|
 | `pnpm check` | 56 files，0 errors ✅ |
-| `pnpm test:coverage` | 20 files / 83 tests，0 failures ✅ |
+| `pnpm test:coverage` | 20 files / 84 tests，0 failures ✅ |
 | `pnpm -r --if-present run build` | 26 modules，exit 0；worker 独立 bundle 已生成 ✅ |
 | `pnpm test:e2e` | desktop + mobile viewport，4/4 passed ✅ |
 | Playwright latency attachment | 133 frames，p95 6.6 ms（合成管线） ✅ |

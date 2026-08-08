@@ -81,9 +81,9 @@ function calibrationCopy(calibration) {
   }
   if (calibration?.status === "ready") {
     const noise = Math.round(calibration.noiseFloorRms * 100);
-    return `环境检查完成：噪声约 ${noise}%。旋律即将进入跑道。`;
+    return `环境检查完成：噪声约 ${noise}%。目标长音即将进入跑道。`;
   }
-  return "旋律即将从中央游标进入。";
+  return "目标长音即将从中央游标进入。";
 }
 
 function renderSession({ practice, session }) {
