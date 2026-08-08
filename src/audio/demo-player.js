@@ -2,9 +2,10 @@ import { midiToFrequency } from "../pitch/note.js";
 
 const DEMO_TONE = Object.freeze({
   waveform: "triangle",
-  peakGain: 0.065,
-  lowpassHz: 1400,
-  attackSeconds: 0.08,
+  peakGain: 0.06,
+  lowpassHz: 2400,
+  filterQ: 0.55,
+  attackSeconds: 0.055,
   releaseSeconds: 0.14,
 });
 
@@ -27,6 +28,7 @@ export function buildDemoSchedule(practice, startAt) {
         waveform: DEMO_TONE.waveform,
         peakGain: DEMO_TONE.peakGain,
         lowpassHz: DEMO_TONE.lowpassHz,
+        filterQ: DEMO_TONE.filterQ,
       };
     });
 }
@@ -60,7 +62,7 @@ export class DemoPlayer {
       oscillator.frequency.setValueAtTime(item.frequencyHz, item.startAt);
       filter.type = "lowpass";
       filter.frequency.setValueAtTime(item.lowpassHz, item.startAt);
-      filter.Q.setValueAtTime(0.7, item.startAt);
+      filter.Q.setValueAtTime(item.filterQ, item.startAt);
       gain.gain.setValueAtTime(0.0001, item.startAt);
       gain.gain.exponentialRampToValueAtTime(item.peakGain, item.attackEndAt);
       gain.gain.setValueAtTime(item.peakGain, item.releaseStartAt);

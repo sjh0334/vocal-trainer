@@ -1,8 +1,8 @@
 # “听见你的声音” Web 练歌器 Implementation Plan
 
 **Feature:** F001 — `docs/features/F001-realtime-pitch-trainer.md`
-**Goal:** 用户在浏览器完成“选择简单旋律 → 准备页试听并明确开始 → 实时跟唱 → 看懂偏差 → 获得可解释评分 → 回放本地录音”的可信闭环。
-**Acceptance Criteria:** AC-A1 82–880 Hz 测试音中位误差≤5 cents；AC-A2 静音/低置信度不入评分；AC-A3 音频资源严格单实例并可靠释放；AC-B1 至少两条版本化简单旋律，选择后进入独立准备页，试听音色柔和且仅在用户明确开始后请求麦克风；AC-B2 Canvas 同轴展示目标、轨迹、游标和文字反馈；AC-B3 p95 视觉反馈≤150 ms；AC-C1 音准/稳定度解耦；AC-C2 报告可解释且数据不足不强打分；AC-C3 录音回放与轨迹同步并可刷新恢复；AC-C4 本地 TTL=0 且可完整删除；AC-C5 Chromium/Android Chrome 实测并记录 Safari 结论；AC-C6 PWA-ready 但首版不注册 Service Worker。
+**Goal:** 用户在浏览器完成“选择明确长音 → 准备页试听并明确开始 → 实时保持长音 → 看懂偏差 → 获得可解释评分 → 回放本地录音”的可信闭环。
+**Acceptance Criteria:** AC-A1 82–880 Hz 测试音中位误差≤5 cents；AC-A2 静音/低置信度不入评分；AC-A3 音频资源严格单实例并可靠释放；AC-B1 提供 A3/C4/E4 三个版本化长音，选择后进入独立准备页，试听音色清晰柔和且仅在用户明确开始后请求麦克风；AC-B2 Canvas 用 10 秒窗口同轴展示目标、显示专用平滑轨迹、游标和文字反馈；AC-B3 p95 视觉反馈≤150 ms；AC-C1 音准/稳定度解耦；AC-C2 报告可解释且数据不足不强打分；AC-C3 录音回放与轨迹同步并可刷新恢复；AC-C4 本地 TTL=0 且可完整删除；AC-C5 Chromium/Android Chrome 实测并记录 Safari 结论；AC-C6 PWA-ready 但首版不注册 Service Worker。
 **Architecture cell:** `browser-vocal-trainer`
 **Map delta:** none
 **Map delta why:** F001 kickoff 已创建 ownership cell，本计划只在已确认边界内实现。

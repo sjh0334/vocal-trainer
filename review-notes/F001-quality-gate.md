@@ -9,7 +9,7 @@ created: 2026-08-08
 
 Spec: `docs/features/F001-realtime-pitch-trainer.md`  
 原始需求: `README.md`, `feature-discussions/2026-08-07-f001-design/README.md`  
-检查时间: 2026-08-08 15:20 Asia/Shanghai
+检查时间: 2026-08-08 18:52 Asia/Shanghai
 Worktree: `/Users/sss/vocal-trainer-f001`  
 验证 URL: `http://127.0.0.1:4173`（当前 feature worktree 的 Vite server）
 
@@ -29,7 +29,7 @@ Worktree: `/Users/sss/vocal-trainer-f001`
 | 加入录音回放 | C3, C4 | ✅ | 单条原子记录、回放、轨迹游标、刷新恢复、单删/全删 |
 | 删除上一版实现 | Current State | ✅ | 当前实现从空基线重新建设，提交链自 `2951600` 起 |
 | 标题“听见你的声音” | B1 | ✅ | 文档标题、HTML title、首页视觉证据 |
-| 试听音色不刺耳 | B1 | ✅（实现）/ 待主观确认 | 三角波、1400 Hz 低通、0.065 峰值增益、80/140 ms 渐入渐出由单测锁定；浏览器已可试听 |
+| 试听音色清晰、不刺耳也不过闷 | B1 | ✅（实现）/ 待主观确认 | 三角波、2400 Hz 低通、Q 0.55、0.06 峰值增益、55/140 ms 渐入渐出由单测锁定；浏览器已可试听 |
 | 试听与开始放在准备页，进入不自动开练 | A3, B1 | ✅ | E2E 断言进入准备页后 `getUserMedia` 调用为 0，点击“开始录制”后为 1 |
 | 跑道速度慢、显示不抖、目标音明确 | B1, B2 | ✅ | 10 秒窗口、5 帧中值显示平滑、静音间隙重置与输入不变单测；A3/220 Hz 跨页面可见 |
 
@@ -75,6 +75,8 @@ Scope verdict: ✅ 必做。
 
 实际证据：Playwright 在桌面和移动 viewport 各完成一次长音全路径；Browser Preview 已打开当前 worktree 的 `127.0.0.1:4173`。本轮截图 dogfood 发现实时读数仍显示 MIDI `57`，根因是两份反馈格式化逻辑漂移；已抽成 `formatLiveFeedback` 单一投影并以红绿测试修复，现在实时读数显示 `A3`。
 
+示范音参数修订后，另用真实 Chromium 走完 `A3 准备页 → 试听目标音 → 8 秒播放结束`，按钮恢复为“试听目标音”，`pageErrors=[]`；Hub Browser Preview 同步打开供 operator 进行主观听感验收。
+
 ## 视觉证据映射
 
 | 需求 | 证据 |
@@ -102,7 +104,7 @@ Scope verdict: ✅ 必做。
 | `pnpm test:e2e` | desktop + mobile viewport，4/4 passed ✅ |
 | Playwright latency attachment | 133 frames，p95 6.6 ms（合成管线） ✅ |
 
-Coverage 总体 70.12%；入口 `app.js` 由 Playwright 覆盖但未并入 Vitest v8 数据。会话控制器 85.67%、评分引擎 97.46%、长音定义与 legacy readback 核心路径有独立单元/集成测试。正式 review 修复另覆盖 recorder stop、audio teardown、IndexedDB save 三个 abort 竞态边界；后续试用修订覆盖准备页麦克风边界、柔和示范音、慢速窗口、显示专用平滑和实时音名投影。
+Coverage 总体 70.14%；入口 `app.js` 由 Playwright 覆盖但未并入 Vitest v8 数据。会话控制器 85.67%、评分引擎 97.46%、长音定义与 legacy readback 核心路径有独立单元/集成测试。正式 review 修复另覆盖 recorder stop、audio teardown、IndexedDB save 三个 abort 竞态边界；后续试用修订覆盖准备页麦克风边界、清晰柔和的示范音、慢速窗口、显示专用平滑和实时音名投影。
 
 ## Artifact Hygiene
 
