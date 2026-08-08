@@ -11,4 +11,4 @@ created: 2026-08-07
 
 | ID | Name | Status | Owner | Link |
 |----|------|--------|-------|------|
-| F001 | 听见你的声音 | review | 砚砚 | [F001](docs/features/F001-realtime-pitch-trainer.md) |
+| F001 | 听见你的声音 | in-progress | 砚砚 | [F001](docs/features/F001-realtime-pitch-trainer.md) |

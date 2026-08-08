@@ -8,7 +8,7 @@ created: 2026-08-07
 
 # F001: 听见你的声音
 
-> **Status**: implementation_review | **Owner**: 砚砚 | **Priority**: P1
+> **Status**: in-progress | **Owner**: 砚砚 | **Priority**: P1
 
 ## Why
 
@@ -165,6 +165,7 @@ created: 2026-08-07
 | 2026-08-08 | 根据 operator 试用反馈，产品标题改为“听见你的声音”，增加显式练习准备页并柔化示范音 |
 | 2026-08-08 | 根据第二轮试用反馈，Primary Journey 收敛为单一长音；跑道改用 10 秒窗口和显示专用平滑 |
 | 2026-08-08 | 根据试听反馈，将示范音低通从 1400 Hz 提升到 2400 Hz，并缩短起音、降低 Q 与峰值增益，改善偏闷听感而不恢复刺耳峰值 |
+| 2026-08-08 | Implementation phases A–C merged via PR #1；F001 保持 in-progress，等待 AC-B3 真实输入延迟与 AC-C5 移动设备验收 |
 
 ## Review Gate
 
