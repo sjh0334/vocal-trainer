@@ -8,6 +8,33 @@ export function midiToY(midi, { centerMidi, centerY, pixelsPerSemitone }) {
   return centerY - (midi - centerMidi) * pixelsPerSemitone;
 }
 
+function median(values) {
+  const sorted = values.toSorted((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
+export function smoothTrajectoryForDisplay(trajectory, { windowSize = 5, resetGapMs = 250 } = {}) {
+  let window = [];
+  let previousVoicedAt = null;
+  return trajectory.map((point) => {
+    if (!Number.isFinite(point.midi)) {
+      window = [];
+      previousVoicedAt = null;
+      return { ...point };
+    }
+    if (previousVoicedAt !== null && point.timestampMs - previousVoicedAt > resetGapMs) {
+      window = [];
+    }
+    window.push(point.midi);
+    if (window.length > windowSize) {
+      window = window.slice(-windowSize);
+    }
+    previousVoicedAt = point.timestampMs;
+    return { ...point, midi: median(window) };
+  });
+}
+
 function noteRange(practice, currentTarget) {
   const notes = practice.segments
     .map((segment) => segment.midiNote)
@@ -22,9 +49,9 @@ export function createTrackViewModel({
   elapsedMs,
   width,
   height,
-  windowMs = 5200,
+  windowMs = 10000,
 }) {
-  const playheadX = Math.round(width * 0.34);
+  const playheadX = Math.round(width * 0.18);
   const pixelsPerMs = width / windowMs;
   const currentTarget = targetAtTime(practice, elapsedMs);
   const { centerMidi } = noteRange(practice, currentTarget);
@@ -46,7 +73,7 @@ export function createTrackViewModel({
         x2: timeToX(segment.endMs, timeline),
         y: midiToY(segment.midiNote, geometry),
       })),
-    points: trajectory
+    points: smoothTrajectoryForDisplay(trajectory)
       .filter((point) => Number.isFinite(point.midi))
       .map((point) => ({
         ...point,

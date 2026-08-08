@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { createTrackViewModel, midiToY, timeToX } from "../../src/render/track-renderer.js";
+import {
+  createTrackViewModel,
+  midiToY,
+  smoothTrajectoryForDisplay,
+  timeToX,
+} from "../../src/render/track-renderer.js";
 
 const PRACTICE = {
   id: "test",
@@ -41,5 +46,49 @@ describe("track geometry", () => {
     expect(model.segments.find((segment) => segment.id === "d").x1).toBeLessThan(model.playheadX);
     expect(model.points.at(-1)).toMatchObject({ classification: "sharp" });
     expect(model.points.at(-1).x).toBe(model.playheadX);
+  });
+
+  it("uses a slower ten-second default runway", () => {
+    const practice = {
+      ...PRACTICE,
+      segments: [{ id: "a3", startMs: 0, endMs: 8000, midiNote: 57, label: "A3" }],
+    };
+    const model = createTrackViewModel({
+      practice,
+      trajectory: [],
+      elapsedMs: 0,
+      width: 1000,
+      height: 320,
+    });
+
+    expect(model.segments[0].x2 - model.segments[0].x1).toBe(800);
+    expect(model.segments[0].x2).toBeLessThanOrEqual(1000);
+  });
+
+  it("smooths display jitter without mutating raw trajectory", () => {
+    const raw = [
+      { timestampMs: 0, midi: 57, classification: "accurate" },
+      { timestampMs: 40, midi: 57.04, classification: "accurate" },
+      { timestampMs: 80, midi: 58.2, classification: "sharp" },
+      { timestampMs: 120, midi: 56.98, classification: "accurate" },
+      { timestampMs: 160, midi: 57.02, classification: "accurate" },
+    ];
+    const snapshot = structuredClone(raw);
+
+    const displayed = smoothTrajectoryForDisplay(raw);
+
+    expect(displayed.at(-1).midi).toBeCloseTo(57.02, 2);
+    expect(displayed[2].midi).toBeLessThan(57.1);
+    expect(raw).toEqual(snapshot);
+  });
+
+  it("resets display smoothing after a silent gap", () => {
+    const displayed = smoothTrajectoryForDisplay([
+      { timestampMs: 0, midi: 57, classification: "accurate" },
+      { timestampMs: 40, midi: 57.1, classification: "accurate" },
+      { timestampMs: 500, midi: 60, classification: "sharp" },
+    ]);
+
+    expect(displayed.at(-1).midi).toBe(60);
   });
 });

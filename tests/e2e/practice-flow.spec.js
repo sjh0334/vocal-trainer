@@ -14,8 +14,10 @@ test("shows the product promise and responsive practice choices", async ({ page 
 
   await expect(page).toHaveTitle("听见你的声音");
   await expect(page.getByRole("heading", { name: /听见你的声音/ })).toBeVisible();
-  await expect(page.getByText("五声音阶往返")).toBeVisible();
-  await expect(page.getByText("三度跳进短句")).toBeVisible();
+  await expect(page.getByText("长音 A3")).toBeVisible();
+  await expect(page.getByText("长音 C4")).toBeVisible();
+  await expect(page.getByText("长音 E4")).toBeVisible();
+  await expect(page.getByText("220 Hz").first()).toBeVisible();
   await expect(page.getByText(/本地保存，不上传/)).toBeVisible();
   if (testInfo.project.name === "mobile-chromium") {
     await expect(page.locator(".hero-orbit")).toBeHidden();
@@ -32,19 +34,32 @@ test("completes a practice, replays the recording and deletes local history", as
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/");
 
-  await page.getByRole("button", { name: /五声音阶往返/ }).click();
-  await expect(page.getByRole("heading", { name: "五声音阶往返" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "试听旋律" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "开始练习" })).toBeVisible();
+  await page.getByRole("button", { name: /长音 A3/ }).click();
+  await expect(page.getByRole("heading", { name: "长音 A3" })).toBeVisible();
+  await expect(page.getByText("目标音 A3")).toBeVisible();
+  await expect(page.getByText("220 Hz").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "试听目标音" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始录制" })).toBeVisible();
   await expect.poll(() => page.evaluate(() => globalThis.__syntheticGetUserMediaCalls)).toBe(0);
+  if (testInfo.project.name === "desktop-chromium") {
+    await page.screenshot({ path: testInfo.outputPath("preparation.png"), fullPage: true });
+  }
 
-  await page.getByRole("button", { name: "开始练习" }).click();
+  await page.getByRole("button", { name: "开始录制" }).click();
   await expect.poll(() => page.evaluate(() => globalThis.__syntheticGetUserMediaCalls)).toBe(1);
-  await expect(page.getByRole("heading", { name: "五声音阶往返" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "长音 A3" })).toBeVisible();
+  await expect(page.getByText("目标 A3 · 220 Hz")).toBeVisible();
   await expect(page.getByLabel("实时音高跑道")).toBeVisible();
+  await expect(page.locator("#live-note")).toHaveText("A3");
+  if (testInfo.project.name === "desktop-chromium") {
+    await page.screenshot({ path: testInfo.outputPath("live-runway.png"), fullPage: true });
+  }
 
   await expect(page.getByText("本次总分")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("数据不足")).toHaveCount(0);
+  await expect(
+    page.locator(".score-card").filter({ hasText: "音准" }).locator("strong"),
+  ).toHaveText("100");
   await expect(page.getByRole("button", { name: "播放录音" })).toBeVisible();
 
   const latencies = await page.evaluate(async () => {
@@ -74,14 +89,14 @@ test("completes a practice, replays the recording and deletes local history", as
 
   await page.reload();
   await page.getByRole("button", { name: /历史 1/ }).click();
-  await page.getByRole("button", { name: /五声音阶往返/ }).click();
+  await page.getByRole("button", { name: /长音 A3/ }).click();
   await page.getByRole("button", { name: "播放录音" }).click();
   await expect(page.getByRole("button", { name: "暂停录音" })).toBeVisible();
   await expect(page.locator("#playback-time")).not.toHaveText("0.0s");
 
   await page.getByRole("button", { name: "返回练习" }).click();
   await page.getByRole("button", { name: /历史 1/ }).click();
-  await expect(page.getByText("五声音阶往返")).toBeVisible();
+  await expect(page.getByText("长音 A3")).toBeVisible();
   await page.getByRole("button", { name: "删除记录" }).click();
   await expect(page.getByText("还没有练习记录")).toBeVisible();
   expect(pageErrors).toEqual([]);

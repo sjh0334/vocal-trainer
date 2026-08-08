@@ -328,6 +328,20 @@ h3 {
   line-height: 1.8;
 }
 
+.target-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0.7rem 0 0;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgb(141 123 255 / 45%);
+  border-radius: 999px;
+  color: var(--accent-bright);
+  background: rgb(141 123 255 / 10%);
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .prepare-summary,
 .prepare-actions {
   display: grid;

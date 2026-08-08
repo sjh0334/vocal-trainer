@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { SIMPLE_MELODIES } from "../../src/exercises/simple-melodies.js";
+import { LONG_TONE_PRACTICES } from "../../src/exercises/long-tones.js";
 import { renderScreen } from "../../src/ui/app-view.js";
 
 describe("renderScreen", () => {
   it("renders the product title and routes melody choices into preparation", () => {
     const html = renderScreen({
       route: "home",
-      practices: SIMPLE_MELODIES,
-      selectedPracticeId: SIMPLE_MELODIES[0].id,
+      practices: LONG_TONE_PRACTICES,
       history: [],
     });
 
     expect(html).toContain("听见你的声音");
-    expect(html).toContain("五声音阶往返");
+    expect(html).toContain("长音 A3");
+    expect(html).toContain("220 Hz");
+    expect(html).toContain("8.0 秒");
+    expect(html).not.toContain("440");
+    expect(html).not.toContain("五声音阶往返");
     expect(html).toContain('data-action="prepare"');
     expect(html).not.toContain('data-action="preview"');
     expect(html).not.toContain('data-action="begin-practice"');
@@ -23,20 +26,22 @@ describe("renderScreen", () => {
   it("renders preview and explicit start actions on the preparation page", () => {
     const html = renderScreen({
       route: "prepare",
-      practice: SIMPLE_MELODIES[0],
+      practice: LONG_TONE_PRACTICES[0],
     });
 
-    expect(html).toContain("五声音阶往返");
-    expect(html).toContain("先听一遍旋律");
+    expect(html).toContain("目标音 A3");
+    expect(html).toContain("220 Hz");
+    expect(html).toContain("先听一遍目标长音");
     expect(html).toContain('data-action="preview"');
     expect(html).toContain('data-action="begin-practice"');
+    expect(html).toContain("开始录制");
     expect(html).toContain('data-action="home"');
   });
 
   it("renders running feedback with text in addition to color", () => {
     const html = renderScreen({
       route: "session",
-      practice: SIMPLE_MELODIES[0],
+      practice: LONG_TONE_PRACTICES[0],
       session: {
         state: "running",
         trajectory: [{ classification: "sharp", signedCents: 28, midi: 60.2 }],
@@ -45,13 +50,14 @@ describe("renderScreen", () => {
 
     expect(html).toContain("偏高 +28¢");
     expect(html).toContain("实时音高跑道");
+    expect(html).toContain("目标 A3 · 220 Hz");
     expect(html).toContain('data-action="stop"');
   });
 
   it("shows the measured environment result before the countdown", () => {
     const html = renderScreen({
       route: "session",
-      practice: SIMPLE_MELODIES[0],
+      practice: LONG_TONE_PRACTICES[0],
       session: {
         state: "countdown",
         trajectory: [],
@@ -66,7 +72,7 @@ describe("renderScreen", () => {
   it("renders explainable scores, diagnostics and recording controls", () => {
     const html = renderScreen({
       route: "report",
-      practice: SIMPLE_MELODIES[0],
+      practice: LONG_TONE_PRACTICES[0],
       session: {
         state: "report",
         persistence: "saved",

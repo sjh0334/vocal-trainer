@@ -4,13 +4,14 @@ import "./styles/responsive.css";
 import { DemoPlayer } from "./audio/demo-player.js";
 import { LiveAudioSession } from "./audio/live-audio-session.js";
 import { Recorder } from "./audio/recorder.js";
-import { SIMPLE_MELODIES } from "./exercises/simple-melodies.js";
+import { ACTIVE_PRACTICES, resolvePractice } from "./exercises/practice-catalog.js";
 import { PlaybackController } from "./playback/playback-controller.js";
 import { TrackRenderer } from "./render/track-renderer.js";
 import { handlePageVisibility } from "./session/page-lifecycle.js";
 import { PracticeSessionController } from "./session/practice-session-controller.js";
 import { SessionRepository } from "./storage/session-repository.js";
 import { renderScreen } from "./ui/app-view.js";
+import { formatLiveFeedback } from "./ui/live-feedback.js";
 
 const app = document.querySelector("#app");
 const runtimeConfig = globalThis.__VOCAL_TRAINER_CONFIG__ ?? {};
@@ -29,9 +30,8 @@ const sessionController = new PracticeSessionController({
 
 const state = {
   route: "home",
-  practices: SIMPLE_MELODIES,
-  selectedPracticeId: SIMPLE_MELODIES[0].id,
-  practice: SIMPLE_MELODIES[0],
+  practices: ACTIVE_PRACTICES,
+  practice: ACTIVE_PRACTICES[0],
   history: [],
   session: sessionController.snapshot(),
   playback: playback.snapshot(),
@@ -40,7 +40,7 @@ const state = {
 let playbackAnimation = null;
 
 function findPractice(id) {
-  return SIMPLE_MELODIES.find((practice) => practice.id === id) ?? SIMPLE_MELODIES[0];
+  return resolvePractice(id) ?? ACTIVE_PRACTICES[0];
 }
 
 async function refreshHistory() {
@@ -48,20 +48,6 @@ async function refreshHistory() {
     ...record,
     practiceTitle: findPractice(record.practiceId).title,
   }));
-}
-
-function liveFeedback(point) {
-  if (!point || point.classification === "unvoiced") {
-    return { className: "unvoiced", label: "等待发声", note: "—" };
-  }
-  const cents = Math.round(point.signedCents);
-  const label =
-    point.classification === "sharp"
-      ? `偏高 +${cents}¢`
-      : point.classification === "flat"
-        ? `偏低 ${cents}¢`
-        : `准确 ${cents >= 0 ? "+" : ""}${cents}¢`;
-  return { className: point.classification, label, note: Math.round(point.midi) };
 }
 
 function drawLiveTrack() {
@@ -104,7 +90,7 @@ function render() {
 
 function updateRunningSurface() {
   const latest = state.session.trajectory.at(-1);
-  const feedback = liveFeedback(latest);
+  const feedback = formatLiveFeedback(latest);
   const readout = document.querySelector(".live-readout");
   if (!readout) {
     render();
@@ -208,7 +194,6 @@ app.addEventListener("click", async (event) => {
   try {
     if (action === "prepare") {
       await demoPlayer.stop();
-      state.selectedPracticeId = practiceId;
       state.practice = findPractice(practiceId);
       state.route = "prepare";
       render();

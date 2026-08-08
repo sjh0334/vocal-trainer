@@ -5,7 +5,7 @@ export function installSyntheticMedia() {
     const samples = new Float32Array(2048);
     for (let index = 0; index < samples.length; index += 1) {
       const absoluteIndex = sequence * 512 + index;
-      samples[index] = Math.sin((2 * Math.PI * 261.63 * absoluteIndex) / sampleRate) * 0.3;
+      samples[index] = Math.sin((2 * Math.PI * 220 * absoluteIndex) / sampleRate) * 0.3;
     }
     return samples;
   }
@@ -34,7 +34,7 @@ export function installSyntheticMedia() {
     writeText(36, "data");
     view.setUint32(40, sampleCount * 2, true);
     for (let index = 0; index < sampleCount; index += 1) {
-      const sample = Math.sin((2 * Math.PI * 261.63 * index) / wavSampleRate) * 0.25;
+      const sample = Math.sin((2 * Math.PI * 220 * index) / wavSampleRate) * 0.25;
       view.setInt16(44 + index * 2, Math.round(sample * 32767), true);
     }
     return new Blob([buffer], { type: mimeType });

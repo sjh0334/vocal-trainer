@@ -1,6 +1,8 @@
 import { validatePracticeDefinition } from "../domain/practice-definition.js";
+import { midiToNoteName } from "../pitch/note.js";
+import { LONG_TONE_PRACTICES } from "./long-tones.js";
 
-function melody(id, title, notes) {
+function legacyMelody(id, title, notes) {
   const segments = [];
   let cursor = 0;
   for (const [index, midiNote] of notes.entries()) {
@@ -9,16 +11,7 @@ function melody(id, title, notes) {
       startMs: cursor,
       endMs: cursor + 520,
       midiNote,
-      label:
-        midiNote === 60
-          ? "C4"
-          : midiNote === 62
-            ? "D4"
-            : midiNote === 64
-              ? "E4"
-              : midiNote === 65
-                ? "F4"
-                : "G4",
+      label: midiToNoteName(midiNote),
     });
     cursor += 520;
     if (index < notes.length - 1) {
@@ -35,7 +28,15 @@ function melody(id, title, notes) {
   return validatePracticeDefinition({ id, version: 1, title, leadInMs: 0, segments });
 }
 
-export const SIMPLE_MELODIES = Object.freeze([
-  melody("stepwise-warmup", "五声音阶往返", [60, 62, 64, 67, 64, 62, 60]),
-  melody("thirds-warmup", "三度跳进短句", [60, 64, 62, 65, 64, 67, 64]),
+const LEGACY_PRACTICES = Object.freeze([
+  legacyMelody("stepwise-warmup", "五声音阶往返", [60, 62, 64, 67, 64, 62, 60]),
+  legacyMelody("thirds-warmup", "三度跳进短句", [60, 64, 62, 65, 64, 67, 64]),
 ]);
+
+const PRACTICE_CATALOG = Object.freeze([...LONG_TONE_PRACTICES, ...LEGACY_PRACTICES]);
+
+export const ACTIVE_PRACTICES = LONG_TONE_PRACTICES;
+
+export function resolvePractice(id) {
+  return PRACTICE_CATALOG.find((practice) => practice.id === id) ?? null;
+}

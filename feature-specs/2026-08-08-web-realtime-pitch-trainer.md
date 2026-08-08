@@ -29,7 +29,7 @@ src/
   app.js
   styles.css
   domain/{practice-definition,pitch-frame,session-report}.js
-  exercises/simple-melodies.js
+  exercises/long-tones.js
   audio/{audio-worklet,live-audio-session,recorder,demo-player}.js
   pitch/{yin,note,frame-quality,pitch-worker}.js
   session/practice-session-controller.js
@@ -236,16 +236,16 @@ tests/
 
 ### Task 10: 长音定义与目标音可见性
 
-**Files:** Create `src/exercises/long-tones.js`; Delete `src/exercises/simple-melodies.js`; Modify `src/app.js`, `src/ui/app-view.js`; Test `tests/unit/long-tones.test.js`, `tests/unit/app-view.test.js`, `tests/e2e/practice-flow.spec.js`.
+**Files:** Create `src/exercises/long-tones.js`, `src/exercises/practice-catalog.js`; Delete `src/exercises/simple-melodies.js`; Modify `src/app.js`, `src/ui/app-view.js`; Test `tests/unit/long-tones.test.js`, `tests/unit/practice-catalog.test.js`, `tests/unit/app-view.test.js`, `tests/e2e/practice-flow.spec.js`.
 
 1. 先写失败测试：仅有三个单音 8 秒练习；A3=57/220 Hz；首页与准备页显示目标音名、频率、时长，不再出现多音旋律。
 2. Run targeted tests；Expected: FAIL（长音定义和新文案尚不存在）。
-3. 实现不可变长音定义并替换 UI 数据源；删除旧旋律生成器，不保留并行练习来源。
+3. 实现不可变长音定义并替换 UI 数据源；删除旧旋律生成器，但在只读 catalog 中保留旧 ID 的解析定义，确保已持久化记录仍可正确打开且不出现在新练习入口。
 4. Run targeted tests；Expected: PASS。
 
 ### Task 11: 慢速跑道与显示专用平滑
 
-**Files:** Modify `src/render/track-renderer.js`, `src/ui/app-view.js`; Test `tests/unit/track-renderer.test.js`.
+**Files:** Modify `src/render/track-renderer.js`, `src/ui/app-view.js`; Create `src/ui/live-feedback.js`; Test `tests/unit/track-renderer.test.js`, `tests/unit/live-feedback.test.js`.
 
 1. 先写失败测试：8 秒 segment 在默认 viewport 内完整可见；离群抖动被 5 帧中值投影压低；输入数组不变；超过 250 ms 静音间隙后平滑重置。
 2. Run targeted test；Expected: FAIL。
