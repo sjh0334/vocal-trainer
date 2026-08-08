@@ -1,0 +1,163 @@
+.report-hero {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+}
+
+.report-hero span {
+  color: var(--muted);
+}
+
+.report-hero strong {
+  display: block;
+  font-size: clamp(3rem, 9vw, 6rem);
+  line-height: 1;
+}
+
+.report-hero p {
+  max-width: 32rem;
+  margin: 0;
+  color: var(--muted);
+}
+
+.score-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.score-card {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.score-card span {
+  color: var(--muted);
+}
+
+.score-card strong {
+  display: block;
+  margin: 0.5rem 0;
+  font-size: 2rem;
+}
+
+.score-meter {
+  height: 0.3rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 8%);
+}
+
+.score-meter i {
+  display: block;
+  width: var(--score);
+  height: 100%;
+  background: var(--accent);
+}
+
+.report-track,
+.report-columns,
+.report-actions {
+  margin-top: 1rem;
+}
+
+.report-columns {
+  grid-template-columns: 1.25fr 0.75fr;
+}
+
+.diagnostic-card {
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.diagnostic-card h3,
+.diagnostic-card p {
+  margin-bottom: 0.4rem;
+}
+
+.diagnostic-card p,
+.raw-metrics dt {
+  color: var(--muted);
+}
+
+.diagnostic-card .diagnostic-action {
+  color: var(--text);
+}
+
+.raw-metrics > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.raw-metrics dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.error-banner {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgb(255 113 137 / 30%);
+  border-radius: 0.8rem;
+  color: #ff9bad;
+  background: rgb(255 113 137 / 8%);
+}
+
+.history-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.history-row > button:first-child {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 1rem;
+  padding: 1rem 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-row small {
+  grid-column: 1;
+  color: var(--muted);
+}
+
+.history-row strong {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  align-self: center;
+  font-size: 1.5rem;
+}
+
+.icon-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  color: var(--danger);
+  background: transparent;
+}
+
+.empty-state {
+  padding: 4rem 1rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty-state strong {
+  color: var(--text);
+  font-size: 1.2rem;
+}

@@ -1,0 +1,65 @@
+@media (max-width: 720px) {
+  .hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding: 3rem 0 2rem;
+  }
+
+  .hero-orbit {
+    display: none;
+  }
+
+  .promise-grid,
+  .report-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .score-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .page-header,
+  .session-header,
+  .report-hero {
+    align-items: flex-start;
+  }
+
+  .page-header,
+  .session-header,
+  .report-hero,
+  .report-actions {
+    flex-direction: column;
+  }
+
+  .live-readout {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-heading {
+    align-items: flex-end;
+  }
+
+  .melody-enter {
+    display: none;
+  }
+
+  .prepare-summary,
+  .prepare-actions {
+    grid-template-columns: 1fr;
+  }
+
+  canvas {
+    height: 18rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+  }
+}
