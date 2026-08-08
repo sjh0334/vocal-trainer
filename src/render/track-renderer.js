@@ -147,13 +147,12 @@ export class TrackRenderer {
       const blockHeight = Math.max(14, model.pixelsPerSemitone * 0.72);
       context.fillStyle = theme.target;
       context.beginPath();
-      context.roundRect(
-        segment.x1,
-        segment.y - blockHeight / 2,
-        segment.x2 - segment.x1,
-        blockHeight,
-        7,
-      );
+      const block = [segment.x1, segment.y - blockHeight / 2, segment.x2 - segment.x1, blockHeight];
+      if (typeof context.roundRect === "function") {
+        context.roundRect(...block, 7);
+      } else {
+        context.rect(...block);
+      }
       context.fill();
       context.fillStyle = theme.targetText;
       context.fillText(segment.label, (segment.x1 + segment.x2) / 2, segment.y);

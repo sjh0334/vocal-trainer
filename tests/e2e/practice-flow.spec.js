@@ -30,6 +30,14 @@ test("shows the product promise and responsive practice choices", async ({ page 
 test("completes a practice, replays the recording and deletes local history", async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() => {
+    const originalRoundRect = CanvasRenderingContext2D.prototype.roundRect;
+    globalThis.__trackRoundRects = [];
+    CanvasRenderingContext2D.prototype.roundRect = function instrumentedRoundRect(...args) {
+      globalThis.__trackRoundRects.push({ canvasId: this.canvas.id, x: args[0] });
+      return originalRoundRect.apply(this, args);
+    };
+  });
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/");
@@ -61,6 +69,10 @@ test("completes a practice, replays the recording and deletes local history", as
     page.locator(".score-card").filter({ hasText: "音准" }).locator("strong"),
   ).toHaveText("100");
   await expect(page.getByRole("button", { name: "播放录音" })).toBeVisible();
+  const initialReportTargetX = await page.evaluate(
+    () => globalThis.__trackRoundRects.filter((call) => call.canvasId === "report-track").at(-1)?.x,
+  );
+  expect(initialReportTargetX).toBeGreaterThanOrEqual(0);
 
   const latencies = await page.evaluate(async () => {
     const database = await new Promise((resolve, reject) => {

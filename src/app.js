@@ -74,7 +74,7 @@ function drawReportTrack() {
     return;
   }
   const elapsedMs =
-    state.playback.cursorMs ||
+    state.playback.cursorMs ??
     Math.min(record.durationMs, record.trajectory.at(-1)?.timestampMs ?? 0);
   new TrackRenderer(canvas).render({
     practice: state.practice,

@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createTrackViewModel,
   midiToY,
   smoothTrajectoryForDisplay,
+  TrackRenderer,
   timeToX,
 } from "../../src/render/track-renderer.js";
 
@@ -90,5 +91,29 @@ describe("track geometry", () => {
     ]);
 
     expect(displayed.at(-1).midi).toBe(60);
+  });
+
+  it("renders the target with a rectangular fallback when roundRect is unavailable", () => {
+    const context = {
+      setTransform: vi.fn(),
+      fillRect: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      rect: vi.fn(),
+      fill: vi.fn(),
+      fillText: vi.fn(),
+    };
+    const canvas = {
+      clientWidth: 800,
+      clientHeight: 320,
+      getContext: () => context,
+    };
+
+    expect(() =>
+      new TrackRenderer(canvas).render({ practice: PRACTICE, trajectory: [], elapsedMs: 0 }),
+    ).not.toThrow();
+    expect(context.rect).toHaveBeenCalledTimes(2);
   });
 });
