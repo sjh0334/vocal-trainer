@@ -211,6 +211,55 @@ tests/
 4. 对照 AC-A1～C6 和 requirements checklist，只用实际证据打勾；不满足项立即修，不写 deferred。
 5. Commit: `test(F001): prove realtime trainer acceptance [砚砚/gpt-5.6-sol🐾]`。
 
+## 2026-08-08 试用修订：长音反馈跑道
+
+**Finish line:** 用户只选择一个舒适的长音目标，页面明确显示音名与频率；可试听、明确开始、看慢速且稳定的实时轨迹，结束后播放本地录音。
+
+**Acceptance Criteria:**
+
+- LT-1：首页只提供 A3（220 Hz）、C4（261.6 Hz）、E4（329.6 Hz）三个 8 秒长音目标；每次 session 只有一个目标音，音名和频率在选择页、准备页与练习页持续可见。
+- LT-2：进入准备页不请求麦克风；可先试听目标长音，只有点击“开始录制”才进入麦克风与录音会话。
+- LT-3：跑道时间窗覆盖完整 8 秒长音；Canvas 使用纯投影的显示平滑轨迹降低抖动，但持久化与评分仍消费质量门后的原始帧。
+- LT-4：长音结束后可播放本次录音，刷新后仍能从本地历史恢复并删除。
+
+**Not building:** 本轮不提供多音旋律、音阶或快速换音练习；不增加自动选音、声部判断、伴奏或云端能力。
+
+### Stateful Object Gate
+
+| 对象 | Owner | 状态/事件变化 | 不变量 |
+|---|---|---|---|
+| 长音练习定义 | `LONG_TONE_PRACTICES` | 选择目标后作为不可变 `PracticeDefinition` 传入既有 session controller | 每条定义只有一个 8 秒 sounding segment，版本随记录持久化 |
+| 原始轨迹 | `PracticeSessionController` | 只在 running 接收质量合格帧，结束时随记录原子保存 | 不因 UI 平滑被覆盖、回写或降采样 |
+| 显示轨迹 | `smoothTrajectoryForDisplay` 纯函数 | render 时从原始轨迹投影；unvoiced/长间隙重置平滑窗口 | 零存储、零跨 session 状态、不能进入 scorer/repository |
+
+对抗场景：目标选择后试听与开始并发时先停止示范音；显示轨迹出现离群点时平滑但原始记录不变；静音间隙后首个 voiced 点不得被间隙前历史拖拽；刷新后播放的仍是完整录音与原始轨迹。
+
+### Task 10: 长音定义与目标音可见性
+
+**Files:** Create `src/exercises/long-tones.js`; Delete `src/exercises/simple-melodies.js`; Modify `src/app.js`, `src/ui/app-view.js`; Test `tests/unit/long-tones.test.js`, `tests/unit/app-view.test.js`, `tests/e2e/practice-flow.spec.js`.
+
+1. 先写失败测试：仅有三个单音 8 秒练习；A3=57/220 Hz；首页与准备页显示目标音名、频率、时长，不再出现多音旋律。
+2. Run targeted tests；Expected: FAIL（长音定义和新文案尚不存在）。
+3. 实现不可变长音定义并替换 UI 数据源；删除旧旋律生成器，不保留并行练习来源。
+4. Run targeted tests；Expected: PASS。
+
+### Task 11: 慢速跑道与显示专用平滑
+
+**Files:** Modify `src/render/track-renderer.js`, `src/ui/app-view.js`; Test `tests/unit/track-renderer.test.js`.
+
+1. 先写失败测试：8 秒 segment 在默认 viewport 内完整可见；离群抖动被 5 帧中值投影压低；输入数组不变；超过 250 ms 静音间隙后平滑重置。
+2. Run targeted test；Expected: FAIL。
+3. 实现 `smoothTrajectoryForDisplay` 纯函数，并仅在 `createTrackViewModel` 的 Canvas points 路径使用；默认 window 改为 10 秒。
+4. Run targeted test + scoring/session tests；Expected: PASS，scorer 与 repository 仍接收原始 trajectory。
+
+### Task 12: 长音录制播放闭环
+
+**Files:** Modify `tests/e2e/practice-flow.spec.js`, `src/ui/app-view.js`, `src/styles.css`; Test desktop/mobile Playwright.
+
+1. 先写失败 E2E：选择 A3→准备页目标为 A3/220 Hz→试听→开始前 getUserMedia=0→明确开始后=1→慢速跑道→报告→播放录音。
+2. 实现长音专用文案与目标徽标，不改既有 recorder/playback ownership。
+3. Run `pnpm check && pnpm test:coverage && pnpm build && pnpm test:e2e`；Expected: 全绿，并在 Browser Preview 人工走完整路径。
+
 ## 技术 OQ（实现中自决）
 
 - OQ-T1：MediaRecorder MIME 以运行时 `isTypeSupported` 选择，不引入转码依赖。
