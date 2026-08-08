@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { ACTIVE_PRACTICES, resolvePractice } from "../../src/exercises/practice-catalog.js";
+import {
+  ACTIVE_PRACTICES,
+  isActivePractice,
+  resolvePractice,
+} from "../../src/exercises/practice-catalog.js";
 
 describe("practice catalog", () => {
   it("offers only long tones while preserving legacy records for readback", () => {
@@ -12,5 +16,7 @@ describe("practice catalog", () => {
     expect(resolvePractice("stepwise-warmup")).toMatchObject({ title: "五声音阶往返" });
     expect(resolvePractice("thirds-warmup")).toMatchObject({ title: "三度跳进短句" });
     expect(resolvePractice("missing")).toBeNull();
+    expect(isActivePractice(resolvePractice("long-tone-a3"))).toBe(true);
+    expect(isActivePractice(resolvePractice("stepwise-warmup"))).toBe(false);
   });
 });

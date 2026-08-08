@@ -102,7 +102,7 @@ Scope verdict: ✅ 必做。
 | `pnpm test:e2e` | desktop + mobile viewport，4/4 passed ✅ |
 | Playwright latency attachment | 133 frames，p95 6.6 ms（合成管线） ✅ |
 
-Coverage 总体 70.26%；入口 `app.js` 由 Playwright 覆盖但未并入 Vitest v8 数据。会话控制器 85.67%、评分引擎 97.46%、长音定义与 legacy readback 核心路径有独立单元/集成测试。正式 review 修复另覆盖 recorder stop、audio teardown、IndexedDB save 三个 abort 竞态边界；后续试用修订覆盖准备页麦克风边界、柔和示范音、慢速窗口、显示专用平滑和实时音名投影。
+Coverage 总体 70.12%；入口 `app.js` 由 Playwright 覆盖但未并入 Vitest v8 数据。会话控制器 85.67%、评分引擎 97.46%、长音定义与 legacy readback 核心路径有独立单元/集成测试。正式 review 修复另覆盖 recorder stop、audio teardown、IndexedDB save 三个 abort 竞态边界；后续试用修订覆盖准备页麦克风边界、柔和示范音、慢速窗口、显示专用平滑和实时音名投影。
 
 ## Artifact Hygiene
 

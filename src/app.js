@@ -4,7 +4,11 @@ import "./styles/responsive.css";
 import { DemoPlayer } from "./audio/demo-player.js";
 import { LiveAudioSession } from "./audio/live-audio-session.js";
 import { Recorder } from "./audio/recorder.js";
-import { ACTIVE_PRACTICES, resolvePractice } from "./exercises/practice-catalog.js";
+import {
+  ACTIVE_PRACTICES,
+  isActivePractice,
+  resolvePractice,
+} from "./exercises/practice-catalog.js";
 import { PlaybackController } from "./playback/playback-controller.js";
 import { TrackRenderer } from "./render/track-renderer.js";
 import { handlePageVisibility } from "./session/page-lifecycle.js";
@@ -211,7 +215,13 @@ app.addEventListener("click", async (event) => {
     } else if (action === "stop") {
       await sessionController.stop("user");
     } else if (action === "retry") {
-      await startPractice(state.practice);
+      if (isActivePractice(state.practice)) {
+        await startPractice(state.practice);
+      } else {
+        state.practice = ACTIVE_PRACTICES[0];
+        state.route = "prepare";
+        render();
+      }
     } else if (action === "home") {
       stopPlaybackAnimation();
       playback.unload();

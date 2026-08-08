@@ -37,6 +37,10 @@ const PRACTICE_CATALOG = Object.freeze([...LONG_TONE_PRACTICES, ...LEGACY_PRACTI
 
 export const ACTIVE_PRACTICES = LONG_TONE_PRACTICES;
 
+export function isActivePractice(practice) {
+  return Boolean(practice && ACTIVE_PRACTICES.some((candidate) => candidate.id === practice.id));
+}
+
 export function resolvePractice(id) {
   return PRACTICE_CATALOG.find((practice) => practice.id === id) ?? null;
 }
