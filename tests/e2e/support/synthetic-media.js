@@ -130,7 +130,11 @@ export function installSyntheticMedia() {
   const fakeStream = {
     getTracks: () => [{ stop() {} }],
   };
-  navigator.mediaDevices.getUserMedia = async () => fakeStream;
+  globalThis.__syntheticGetUserMediaCalls = 0;
+  navigator.mediaDevices.getUserMedia = async () => {
+    globalThis.__syntheticGetUserMediaCalls += 1;
+    return fakeStream;
+  };
   globalThis.AudioContext = SyntheticAudioContext;
   globalThis.webkitAudioContext = SyntheticAudioContext;
   globalThis.AudioWorkletNode = SyntheticAudioWorkletNode;

@@ -1,14 +1,34 @@
 import { midiToFrequency } from "../pitch/note.js";
 
+const DEMO_TONE = Object.freeze({
+  waveform: "triangle",
+  peakGain: 0.065,
+  lowpassHz: 1400,
+  attackSeconds: 0.08,
+  releaseSeconds: 0.14,
+});
+
 export function buildDemoSchedule(practice, startAt) {
   return practice.segments
     .filter((segment) => segment.midiNote !== null)
-    .map((segment) => ({
-      id: segment.id,
-      frequencyHz: midiToFrequency(segment.midiNote),
-      startAt: startAt + segment.startMs / 1000,
-      stopAt: startAt + segment.endMs / 1000,
-    }));
+    .map((segment) => {
+      const noteStartAt = startAt + segment.startMs / 1000;
+      const noteStopAt = startAt + segment.endMs / 1000;
+      return {
+        id: segment.id,
+        frequencyHz: midiToFrequency(segment.midiNote),
+        startAt: noteStartAt,
+        stopAt: noteStopAt,
+        attackEndAt: Math.min(noteStartAt + DEMO_TONE.attackSeconds, noteStopAt),
+        releaseStartAt: Math.max(
+          noteStartAt + DEMO_TONE.attackSeconds,
+          noteStopAt - DEMO_TONE.releaseSeconds,
+        ),
+        waveform: DEMO_TONE.waveform,
+        peakGain: DEMO_TONE.peakGain,
+        lowpassHz: DEMO_TONE.lowpassHz,
+      };
+    });
 }
 
 export class DemoPlayer {
@@ -34,14 +54,19 @@ export class DemoPlayer {
     const schedule = buildDemoSchedule(practice, this.#context.currentTime + 0.05);
     for (const item of schedule) {
       const oscillator = this.#context.createOscillator();
+      const filter = this.#context.createBiquadFilter();
       const gain = this.#context.createGain();
-      oscillator.type = "sine";
+      oscillator.type = item.waveform;
       oscillator.frequency.setValueAtTime(item.frequencyHz, item.startAt);
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(item.lowpassHz, item.startAt);
+      filter.Q.setValueAtTime(0.7, item.startAt);
       gain.gain.setValueAtTime(0.0001, item.startAt);
-      gain.gain.exponentialRampToValueAtTime(0.18, item.startAt + 0.02);
-      gain.gain.setValueAtTime(0.18, Math.max(item.startAt + 0.02, item.stopAt - 0.04));
+      gain.gain.exponentialRampToValueAtTime(item.peakGain, item.attackEndAt);
+      gain.gain.setValueAtTime(item.peakGain, item.releaseStartAt);
       gain.gain.exponentialRampToValueAtTime(0.0001, item.stopAt);
-      oscillator.connect(gain);
+      oscillator.connect(filter);
+      filter.connect(gain);
       gain.connect(this.#context.destination);
       oscillator.start(item.startAt);
       oscillator.stop(item.stopAt);

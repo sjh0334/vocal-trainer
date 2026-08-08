@@ -4,7 +4,7 @@ import { SIMPLE_MELODIES } from "../../src/exercises/simple-melodies.js";
 import { renderScreen } from "../../src/ui/app-view.js";
 
 describe("renderScreen", () => {
-  it("renders selectable melodies with preview and start actions", () => {
+  it("renders the product title and routes melody choices into preparation", () => {
     const html = renderScreen({
       route: "home",
       practices: SIMPLE_MELODIES,
@@ -12,10 +12,25 @@ describe("renderScreen", () => {
       history: [],
     });
 
+    expect(html).toContain("听见你的声音");
     expect(html).toContain("五声音阶往返");
-    expect(html).toContain('data-action="preview"');
-    expect(html).toContain('data-action="start"');
+    expect(html).toContain('data-action="prepare"');
+    expect(html).not.toContain('data-action="preview"');
+    expect(html).not.toContain('data-action="begin-practice"');
     expect(html).toContain("本地保存，不上传");
+  });
+
+  it("renders preview and explicit start actions on the preparation page", () => {
+    const html = renderScreen({
+      route: "prepare",
+      practice: SIMPLE_MELODIES[0],
+    });
+
+    expect(html).toContain("五声音阶往返");
+    expect(html).toContain("先听一遍旋律");
+    expect(html).toContain('data-action="preview"');
+    expect(html).toContain('data-action="begin-practice"');
+    expect(html).toContain('data-action="home"');
   });
 
   it("renders running feedback with text in addition to color", () => {

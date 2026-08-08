@@ -39,6 +39,15 @@
     align-items: flex-end;
   }
 
+  .melody-enter {
+    display: none;
+  }
+
+  .prepare-summary,
+  .prepare-actions {
+    grid-template-columns: 1fr;
+  }
+
   canvas {
     height: 18rem;
   }

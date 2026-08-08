@@ -39,13 +39,6 @@ const state = {
 
 let playbackAnimation = null;
 
-function selectedPractice() {
-  return (
-    SIMPLE_MELODIES.find((practice) => practice.id === state.selectedPracticeId) ??
-    SIMPLE_MELODIES[0]
-  );
-}
-
 function findPractice(id) {
   return SIMPLE_MELODIES.find((practice) => practice.id === id) ?? SIMPLE_MELODIES[0];
 }
@@ -213,19 +206,22 @@ app.addEventListener("click", async (event) => {
   const { action, practiceId, recordId } = button.dataset;
   button.disabled = true;
   try {
-    if (action === "select") {
+    if (action === "prepare") {
+      await demoPlayer.stop();
       state.selectedPracticeId = practiceId;
+      state.practice = findPractice(practiceId);
+      state.route = "prepare";
       render();
     } else if (action === "preview") {
       const practice = findPractice(practiceId);
       button.textContent = "试听中…";
       await demoPlayer.play(practice);
       render();
-    } else if (action === "start") {
-      await startPractice(selectedPractice());
+    } else if (action === "begin-practice") {
+      await startPractice(state.practice);
     } else if (action === "cancel") {
       await sessionController.abort();
-      state.route = "home";
+      state.route = "prepare";
       render();
     } else if (action === "stop") {
       await sessionController.stop("user");
@@ -234,6 +230,7 @@ app.addEventListener("click", async (event) => {
     } else if (action === "home") {
       stopPlaybackAnimation();
       playback.unload();
+      await demoPlayer.stop();
       if (
         ["requesting_permission", "calibrating", "countdown", "running"].includes(
           sessionController.snapshot().state,

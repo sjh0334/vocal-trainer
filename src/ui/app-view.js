@@ -4,42 +4,68 @@ function duration(practice) {
   return ((practice.segments.at(-1)?.endMs ?? 0) / 1000).toFixed(1);
 }
 
-function melodyCard(practice, selectedPracticeId) {
+function melodyCard(practice) {
   const notes = practice.segments.filter((segment) => segment.midiNote !== null);
   const min = Math.min(...notes.map((segment) => segment.midiNote));
   const max = Math.max(...notes.map((segment) => segment.midiNote));
   return `
-    <article class="melody-card ${practice.id === selectedPracticeId ? "is-selected" : ""}">
-      <button class="melody-select" data-action="select" data-practice-id="${practice.id}">
+    <article class="melody-card">
+      <button class="melody-select" data-action="prepare" data-practice-id="${practice.id}">
         <span class="melody-icon" aria-hidden="true">♪</span>
         <span><strong>${practice.title}</strong><small>${notes.length} 个音 · ${duration(practice)} 秒 · MIDI ${min}–${max}</small></span>
+        <span class="melody-enter">进入练习 →</span>
       </button>
-      <button class="ghost-button" data-action="preview" data-practice-id="${practice.id}">试听</button>
     </article>
   `;
 }
 
-function renderHome({ practices, selectedPracticeId, history }) {
+function renderHome({ practices, history }) {
   return `
     <section class="home-page page-grid">
       <header class="hero">
         <div>
           <p class="eyebrow">REAL-TIME PITCH PRACTICE</p>
-          <h1>听见自己的<br /><em>音高轨迹</em></h1>
+          <h1 aria-label="听见你的声音">听见你的<br /><em>声音</em></h1>
           <p class="hero-copy">跟着简单旋律唱，实时看准、偏高还是偏低。练完不只给分，还告诉你下一步怎么练。</p>
         </div>
         <div class="hero-orbit" aria-hidden="true"><span>A4</span><i></i><b>440<small>Hz</small></b></div>
       </header>
       <section class="practice-picker">
         <div class="panel-heading"><div><span class="panel-kicker">01 · CHOOSE</span><h2>选择练习旋律</h2></div><button class="ghost-button" data-action="history">历史 ${history.length}</button></div>
-        <div class="melody-list">${practices.map((practice) => melodyCard(practice, selectedPracticeId)).join("")}</div>
-        <button class="primary-button start-button" data-action="start">开始实时练习 <span>→</span></button>
+        <div class="melody-list">${practices.map((practice) => melodyCard(practice)).join("")}</div>
         <p class="privacy-note">麦克风、录音和报告均在本地处理。本地保存，不上传。</p>
       </section>
       <section class="promise-grid">
         <article><span>01</span><strong>YIN 音高检测</strong><p>不用简单 FFT 猜峰值，专注单声道基频。</p></article>
         <article><span>02</span><strong>一眼看懂偏差</strong><p>位置、文字和颜色共同表达准、高、低。</p></article>
         <article><span>03</span><strong>评分给出方向</strong><p>音准与稳定度解耦，颤音不会被误算成跑调。</p></article>
+      </section>
+    </section>
+  `;
+}
+
+function renderPreparation(practice) {
+  const notes = practice.segments.filter((segment) => segment.midiNote !== null);
+  const min = Math.min(...notes.map((segment) => segment.midiNote));
+  const max = Math.max(...notes.map((segment) => segment.midiNote));
+  return `
+    <section class="prepare-page page-grid">
+      <header class="page-header prepare-header">
+        <div><p class="eyebrow">PRACTICE READY</p><h1>${practice.title}</h1></div>
+        <button class="ghost-button" data-action="home">← 重新选择</button>
+      </header>
+      <section class="practice-picker prepare-panel">
+        <div><span class="panel-kicker">01 · LISTEN</span><h2>先听一遍旋律</h2><p class="prepare-copy">熟悉旋律后，再明确点击开始练习。进入这个页面不会申请麦克风，也不会自动开练。</p></div>
+        <div class="prepare-summary">
+          <div><span>音符</span><strong>${notes.length}</strong></div>
+          <div><span>时长</span><strong>${duration(practice)}s</strong></div>
+          <div><span>音域</span><strong>MIDI ${min}–${max}</strong></div>
+        </div>
+        <div class="prepare-actions">
+          <button class="ghost-button" data-action="preview" data-practice-id="${practice.id}">试听旋律</button>
+          <button class="primary-button" data-action="begin-practice">开始练习 <span>→</span></button>
+        </div>
+        <p class="privacy-note">只有点击“开始练习”后，浏览器才会申请麦克风权限。</p>
       </section>
     </section>
   `;
@@ -117,6 +143,9 @@ function renderHistoryPage(history) {
 }
 
 export function renderScreen(state) {
+  if (state.route === "prepare") {
+    return renderPreparation(state.practice);
+  }
   if (state.route === "session") {
     return renderSession(state);
   }

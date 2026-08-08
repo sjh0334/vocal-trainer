@@ -12,7 +12,8 @@ test.beforeEach(async ({ page }) => {
 test("shows the product promise and responsive practice choices", async ({ page }, testInfo) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: /听见自己的/ })).toBeVisible();
+  await expect(page).toHaveTitle("听见你的声音");
+  await expect(page.getByRole("heading", { name: /听见你的声音/ })).toBeVisible();
   await expect(page.getByText("五声音阶往返")).toBeVisible();
   await expect(page.getByText("三度跳进短句")).toBeVisible();
   await expect(page.getByText(/本地保存，不上传/)).toBeVisible();
@@ -31,7 +32,14 @@ test("completes a practice, replays the recording and deletes local history", as
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/");
 
-  await page.getByRole("button", { name: /开始实时练习/ }).click();
+  await page.getByRole("button", { name: /五声音阶往返/ }).click();
+  await expect(page.getByRole("heading", { name: "五声音阶往返" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "试听旋律" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始练习" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => globalThis.__syntheticGetUserMediaCalls)).toBe(0);
+
+  await page.getByRole("button", { name: "开始练习" }).click();
+  await expect.poll(() => page.evaluate(() => globalThis.__syntheticGetUserMediaCalls)).toBe(1);
   await expect(page.getByRole("heading", { name: "五声音阶往返" })).toBeVisible();
   await expect(page.getByLabel("实时音高跑道")).toBeVisible();
 

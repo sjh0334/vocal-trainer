@@ -9,7 +9,7 @@ created: 2026-08-08
 
 Spec: `docs/features/F001-realtime-pitch-trainer.md`  
 原始需求: `README.md`, `feature-discussions/2026-08-07-f001-design/README.md`  
-检查时间: 2026-08-08 02:17 Asia/Shanghai  
+检查时间: 2026-08-08 15:20 Asia/Shanghai
 Worktree: `/Users/sss/vocal-trainer-f001`  
 验证 URL: `http://127.0.0.1:4173`（当前 feature worktree 的 Vite server）
 
@@ -24,10 +24,13 @@ Worktree: `/Users/sss/vocal-trainer-f001`
 | 音高检测准 | A1, A2 | ✅ | YIN 82.41–880 Hz 含谐波最大误差 0.099 cents；静音/低能量与质量门测试 |
 | 实时反馈直观 | B2, B3 | ⚠️ | Canvas 与文字/位置/颜色反馈已实现；合成浏览器管线 p95 6.6 ms，真实输入基准待验收 |
 | 评分能指路 | C1, C2 | ✅ | 颤音/恒偏回归、40/30/20/10 权重、原始指标与诊断 UI |
-| 先内置简单旋律 | B1 | ✅ | 两条版本化旋律、音域/时长、试听与开始入口 |
+| 先内置简单旋律 | B1 | ✅ | 两条版本化旋律、音域/时长、独立准备页中的试听与开始入口 |
 | 核心先闭环 | A1–C6 | ⚠️ | 自动化 Primary Journey 全绿；真实移动设备验收未执行 |
 | 加入录音回放 | C3, C4 | ✅ | 单条原子记录、回放、轨迹游标、刷新恢复、单删/全删 |
 | 删除上一版实现 | Current State | ✅ | 当前实现从空基线重新建设，提交链自 `2951600` 起 |
+| 标题“听见你的声音” | B1 | ✅ | 文档标题、HTML title、首页视觉证据 |
+| 试听音色不刺耳 | B1 | ✅（实现）/ 待主观确认 | 三角波、1400 Hz 低通、0.065 峰值增益、80/140 ms 渐入渐出由单测锁定；浏览器已可试听 |
+| 试听与开始放在准备页，进入不自动开练 | A3, B1 | ✅ | E2E 断言进入准备页后 `getUserMedia` 调用为 0，点击“开始练习”后为 1 |
 
 ## 功能验收
 
@@ -36,7 +39,7 @@ Worktree: `/Users/sss/vocal-trainer-f001`
 | A1 | ✅ | `src/pitch/yin.js` | `tests/unit/yin.test.js`; 82.41/110/220/440/880 Hz 误差 0.000/0.002/0.015/0.068/0.099 cents |
 | A2 | ✅ | `src/pitch/frame-quality.js` | `yin.test.js`, `frame-quality.test.js`, session 质量门测试 |
 | A3 | ✅ | `src/audio/live-audio-session.js`, `src/session/practice-session-controller.js` | 双 start、权限迟到、设备/Worker 故障、页面隐藏、全资源 teardown |
-| B1 | ✅ | `src/exercises/simple-melodies.js`, `src/audio/demo-player.js` | melody 与 demo player 单测、首页浏览器证据 |
+| B1 | ✅ | `src/exercises/simple-melodies.js`, `src/audio/demo-player.js`, `src/ui/app-view.js` | melody/demo player 单测；准备页 E2E；进入页面前后麦克风调用计数；首页与准备页浏览器证据 |
 | B2 | ✅ | `src/render/track-renderer.js`, `src/ui/app-view.js` | Canvas 纯函数测试、桌面/移动 Playwright、录屏 |
 | B3 | ⚠️ | `src/audio/live-audio-session.js`, `src/session/frame-assessment.js` | 133 帧合成浏览器管线 p95 6.6 ms；未覆盖真实音频设备与 native AudioWorklet 调度 |
 | C1 | ✅ | `src/scoring/scoring-engine.js` | 对称 ±40 cents 主要扣稳定度；恒定 +30 cents 扣音准；跨音符不抵消 |
@@ -67,9 +70,9 @@ Worktree: `/Users/sss/vocal-trainer-f001`
 
 Scope verdict: ✅ 必做。
 
-端到端路径：选择五声音阶往返 → 麦克风/环境状态 → 实时跑道 → 自动结束 → 四项报告 → 播放录音 → 刷新恢复 → 历史打开 → 删除。
+端到端路径：选择五声音阶往返 → 进入准备页（不请求麦克风）→ 试听 → 明确开始 → 麦克风/环境状态 → 实时跑道 → 自动结束 → 四项报告 → 播放录音 → 刷新恢复 → 历史打开 → 删除。
 
-实际证据：Playwright 在桌面和移动 viewport 各完成一次全路径；另录制 6.76 秒浏览器视频。Dogfood 首轮发现浏览器 timer receiver 导致 `Illegal invocation`，已以红绿测试修复并记录于 `docs/bug-report/browser-timer-illegal-invocation/bug-report.md`。
+实际证据：Playwright 在桌面和移动 viewport 各完成一次全路径；本轮另用 Browser Preview 实际进入准备页并触发试听，确认页面不会自动进入练习。首轮录制 6.76 秒浏览器视频；首轮发现浏览器 timer receiver 导致 `Illegal invocation`，已以红绿测试修复并记录于 `docs/bug-report/browser-timer-illegal-invocation/bug-report.md`。
 
 ## 视觉证据映射
 
@@ -79,6 +82,9 @@ Scope verdict: ✅ 必做。
 | 窄屏可读性 | `/tmp/cat-cafe-evidence/F001/home-mobile.png` |
 | 四项评分、诊断、录音轨迹与删除 | `/tmp/cat-cafe-evidence/F001/report-desktop.png` |
 | 实时练习到报告与播放 | `/tmp/cat-cafe-evidence/F001/page@cb85a9c1146fe1f0d46e8bb2d2c5ea74.webm`（6.76 秒） |
+| 新标题与选择页入口 | `/tmp/cat-cafe-evidence/F001-feedback-round/home-title.png` |
+| 独立准备页、试听与明确开始 | `/tmp/cat-cafe-evidence/F001-feedback-round/preparation.png` |
+| 本轮选择→准备→试听交互 | `/tmp/cat-cafe-evidence/F001-feedback-round/page@98f5b71357910b1ddd286e04660a26c8.webm` |
 
 `.pen` 扫描结果：无匹配设计稿；本次 UI 按批准的文字 wireframe 实现，因此标记“⚠️ 无 .pen 设计稿”。
 
@@ -87,13 +93,13 @@ Scope verdict: ✅ 必做。
 | 命令 | 本次结果 |
 |---|---|
 | `pnpm check` | 52 files，0 errors ✅ |
-| `pnpm test:coverage` | 18 files / 76 tests，0 failures ✅ |
+| `pnpm test:coverage` | 18 files / 77 tests，0 failures ✅ |
 | `pnpm -r --if-present run build` | 24 modules，exit 0；worker 独立 bundle 已生成 ✅ |
 | `pnpm test:e2e` | desktop + mobile viewport，4/4 passed ✅ |
 | Playwright latency attachment | 133 frames，p95 6.6 ms（合成管线） ✅ |
 
-Coverage 总体 68.88%；入口 `app.js` 由 Playwright 覆盖但未并入 Vitest v8 数据。会话控制器 85.67%、评分引擎 97.46%、质量门与练习定义核心路径有独立单元/集成测试。正式 review 修复另覆盖 recorder stop、audio teardown、IndexedDB save 三个 abort 竞态边界。
+Coverage 总体 69.42%；入口 `app.js` 由 Playwright 覆盖但未并入 Vitest v8 数据。会话控制器 85.67%、评分引擎 97.46%、质量门与练习定义核心路径有独立单元/集成测试。正式 review 修复另覆盖 recorder stop、audio teardown、IndexedDB save 三个 abort 竞态边界；本轮新增准备页麦克风边界与柔和示范音参数测试。
 
 ## Artifact Hygiene
 
-工作树与 `main...HEAD` 根目录媒体扫描均无命中；截图和录屏仅存在 `/tmp/cat-cafe-evidence/F001/`。Git 工作树干净。
+工作树与 `main...HEAD` 根目录媒体扫描均无命中；截图和录屏仅存在 `/tmp/cat-cafe-evidence/F001/` 与 `/tmp/cat-cafe-evidence/F001-feedback-round/`。提交前 Git 工作树仅包含本轮预期代码、测试和文档变更。

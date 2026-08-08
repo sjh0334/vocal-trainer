@@ -1,8 +1,8 @@
-# Web 实时音高练歌器 Implementation Plan
+# “听见你的声音” Web 练歌器 Implementation Plan
 
 **Feature:** F001 — `docs/features/F001-realtime-pitch-trainer.md`
-**Goal:** 用户在浏览器完成“选择简单旋律 → 实时跟唱 → 看懂偏差 → 获得可解释评分 → 回放本地录音”的可信闭环。
-**Acceptance Criteria:** AC-A1 82–880 Hz 测试音中位误差≤5 cents；AC-A2 静音/低置信度不入评分；AC-A3 音频资源严格单实例并可靠释放；AC-B1 至少两条版本化简单旋律和试听；AC-B2 Canvas 同轴展示目标、轨迹、游标和文字反馈；AC-B3 p95 视觉反馈≤150 ms；AC-C1 音准/稳定度解耦；AC-C2 报告可解释且数据不足不强打分；AC-C3 录音回放与轨迹同步并可刷新恢复；AC-C4 本地 TTL=0 且可完整删除；AC-C5 Chromium/Android Chrome 实测并记录 Safari 结论；AC-C6 PWA-ready 但首版不注册 Service Worker。
+**Goal:** 用户在浏览器完成“选择简单旋律 → 准备页试听并明确开始 → 实时跟唱 → 看懂偏差 → 获得可解释评分 → 回放本地录音”的可信闭环。
+**Acceptance Criteria:** AC-A1 82–880 Hz 测试音中位误差≤5 cents；AC-A2 静音/低置信度不入评分；AC-A3 音频资源严格单实例并可靠释放；AC-B1 至少两条版本化简单旋律，选择后进入独立准备页，试听音色柔和且仅在用户明确开始后请求麦克风；AC-B2 Canvas 同轴展示目标、轨迹、游标和文字反馈；AC-B3 p95 视觉反馈≤150 ms；AC-C1 音准/稳定度解耦；AC-C2 报告可解释且数据不足不强打分；AC-C3 录音回放与轨迹同步并可刷新恢复；AC-C4 本地 TTL=0 且可完整删除；AC-C5 Chromium/Android Chrome 实测并记录 Safari 结论；AC-C6 PWA-ready 但首版不注册 Service Worker。
 **Architecture cell:** `browser-vocal-trainer`
 **Map delta:** none
 **Map delta why:** F001 kickoff 已创建 ownership cell，本计划只在已确认边界内实现。
@@ -169,7 +169,7 @@ tests/
 1. 写失败测试：2048 sample frame+hop overlap、sessionId/sequence、stale frame 丢弃、MediaRecorder MIME 协商、stop 幂等、示范停止后才能录音。
 2. Run targeted tests；Expected: FAIL。
 3. Worklet 只累积/发帧；module Worker 运行 YIN；main session 只路由结构化 PitchFrame。Recorder 用 `MediaRecorder.isTypeSupported` 从 `webm/opus`, `ogg/opus`, `mp4` 选择，均不支持则给可见错误。
-4. DemoPlayer 使用 Oscillator/Gain 按目标 segment 播放，结束时 disconnect/close 并等待短暂缓冲清空。
+4. DemoPlayer 使用低增益三角波、低通滤波和渐入渐出包络按目标 segment 播放，结束时 disconnect/close 并等待短暂缓冲清空；单测锁定音色、峰值增益和包络参数。
 5. Run targeted tests；Expected: PASS；Commit `feat(F001): build single-owner audio pipeline [砚砚/gpt-5.6-sol🐾]`。
 
 ## Task 6: PracticeSessionController 状态机
@@ -187,8 +187,8 @@ tests/
 **Files:** Create `src/exercises/simple-melodies.js`, `src/render/{track-renderer,report-renderer}.js`; Modify `src/app.js`, `src/styles.css`, `index.html`; Test `tests/unit/track-renderer.test.js`, `tests/e2e/practice-flow.spec.js`.
 
 1. 写两条版本化简单旋律（音阶往返、短句跳进），目标 segment 含 rest；写 Canvas viewport/time→x/midi→y 纯函数测试。
-2. 写 Playwright 失败路径：选择→试听→权限/环境→倒计时→实时轨迹→报告。
-3. 实现响应式页面、明确错误/空状态、Canvas target blocks/user line/playhead/tolerance band，准高低同时用位置、文字和颜色表达。
+2. 写 Playwright 失败路径：选择→准备页（麦克风调用仍为 0）→试听→明确开始→权限/环境→倒计时→实时轨迹→报告。
+3. 实现标题“听见你的声音”、响应式选择页和练习准备页、明确错误/空状态、Canvas target blocks/user line/playhead/tolerance band；准备页分别提供“试听旋律”和“开始练习”，准高低同时用位置、文字和颜色表达。
 4. Run: `pnpm vitest run tests/unit/track-renderer.test.js && pnpm test:e2e`；Expected: PASS，窄屏/桌面截图生成到 `project-evidence/F001/`。
 5. Commit: `feat(F001): deliver realtime melody runway [砚砚/gpt-5.6-sol🐾]`。
 
@@ -218,4 +218,3 @@ tests/
 - OQ-T3：评分映射阈值保存在 `score-rules.js` 的 `scorerVersion: 1`；任何调整必须由夹具测试驱动。
 
 无待 operator 决策的价值 OQ；范围已在 2026-08-07 Design Gate 批准。
-
